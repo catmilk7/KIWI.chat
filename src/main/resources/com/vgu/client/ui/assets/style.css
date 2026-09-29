@@ -1,0 +1,26 @@
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Bold.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-BoldItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-ExtraBold.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-ExtraBoldItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-ExtraLight.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-ExtraLightItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Italic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Light.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-LightItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Medium.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-MediumItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Regular.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-SemiBold.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-SemiBoldItalic.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-Thin.ttf'); }
+@font-face { src: url('/com/vgu/client/ui/assets/font/JetBrainsMono-ThinItalic.ttf'); }
+
+.root {
+    -fx-font-family: "JetBrains Mono";
+}
+.text-field{
+    -fx-font-size: 16px;
+}
+.password-field {
+    -fx-font-size: 16px;
+}
