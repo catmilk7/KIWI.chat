@@ -98,6 +98,11 @@ public class secure {
         switchScene(event, "/com/vgu/client/ui/views/auth/login.view.fxml");
     }
 
+    @FXML
+    private void switchChat(ActionEvent event) {
+        switchScene(event, "/com/vgu/client/ui/views/chat/chat.view.fxml");
+    }
+
     private void switchScene(ActionEvent event, String fxmlFile) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFile));
@@ -149,6 +154,7 @@ public class secure {
         } else {
             errorMessage.setVisible(false);
             System.out.println("Logged in as: " + username);
+            switchChat(event);
         }
     }
 
