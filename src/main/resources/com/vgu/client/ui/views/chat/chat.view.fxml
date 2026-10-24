@@ -15,9 +15,10 @@
 <?import javafx.scene.layout.Region?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
+<?import javafx.scene.layout.StackPane?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<AnchorPane minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.ui.controllers.auth.chat">
+<AnchorPane minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.controllers.central.Chat">
     <children>
         <SplitPane dividerPositions="0.25" prefHeight="800.0" prefWidth="1200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <items>
@@ -484,6 +485,75 @@
                             </children>
                         </VBox>
 
+                        <!-- FLOATING USER'S PROFILE -->
+                        <VBox fx:id="usersProfile" visible="true" prefWidth="340.0"
+                              style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);">
+                            <children>
+
+                                <!-- Header Section: Banner & Avatar -->
+                                <AnchorPane prefHeight="110.0">
+                                    <children>
+                                        <!-- Color Banner -->
+                                        <Region prefHeight="65.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0"
+                                                style="-fx-background-color: -color-accent-emphasis; -fx-background-radius: 7 7 0 0;" />
+
+                                        <!-- Avatar Wrapper (Uses StackPane to create a background "cutout" border matching the main BG) -->
+                                        <StackPane layoutX="15.0" layoutY="25.0"
+                                                   style="-fx-background-color: -color-bg-default; -fx-background-radius: 50; -fx-padding: 5;">
+                                            <children>
+                                                <ImageView fitHeight="75.0" fitWidth="75.0" pickOnBounds="true" preserveRatio="true">
+                                                    <image>
+                                                        <Image url="@../../assets/default/anon_user.png" />
+                                                    </image>
+                                                    <clip>
+                                                        <Circle centerX="37.5" centerY="37.5" radius="37.5" />
+                                                    </clip>
+                                                </ImageView>
+                                            </children>
+                                        </StackPane>
+
+                                        <!-- Status Indicator (Online Green Dot with Cutout) -->
+                                        <StackPane layoutX="70.0" layoutY="80.0"
+                                                   style="-fx-background-color: -color-bg-default; -fx-background-radius: 50; -fx-padding: 4;">
+                                            <children>
+                                                <Circle fill="#2ecc71" radius="10.0" stroke="TRANSPARENT" />
+                                            </children>
+                                        </StackPane>
+                                    </children>
+                                </AnchorPane>
+
+                                <!-- User Information Section -->
+                                <VBox spacing="15.0">
+                                    <padding>
+                                        <Insets top="5.0" right="20.0" bottom="20.0" left="20.0" />
+                                    </padding>
+                                    <children>
+
+                                        <!-- Names -->
+                                        <VBox spacing="2.0">
+                                            <children>
+                                                <Label text="Tom" style="-fx-font-size: 20px; -fx-font-weight: bold;" />
+                                                <Label text="tom_eat_wieners" textFill="#a1a1aa" style="-fx-font-size: 14px;" />
+                                            </children>
+                                        </VBox>
+
+                                        <Separator />
+
+                                        <!-- About Me -->
+                                        <VBox spacing="8.0">
+                                            <children>
+                                                <Label text="ABOUT ME" textFill="#a1a1aa" style="-fx-font-size: 12px; -fx-font-weight: bold;" />
+                                                <!-- wrapText="true" ensures the 250 words don't break the layout -->
+                                                <Label text="Hi, I'm Tom! I love coding, drinking coffee, and building chat applications in JavaFX. Always learning and open to collaborating on cool projects."
+                                                       wrapText="true" style="-fx-font-size: 14px; -fx-line-spacing: 2px;" />
+                                            </children>
+                                        </VBox>
+
+                                    </children>
+                                </VBox>
+
+                            </children>
+                        </VBox>
                     </children>
                 </AnchorPane>
             </items>

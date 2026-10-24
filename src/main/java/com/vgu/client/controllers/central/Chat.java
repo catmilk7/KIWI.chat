@@ -1,11 +1,10 @@
-package com.vgu.client.ui.controllers.auth;
+package com.vgu.client.controllers.central;
 
 import javafx.fxml.FXML;
-import javafx.scene.*;
 import javafx.scene.control.*;
 import org.kordamp.ikonli.javafx.FontIcon;
 
-public class chat {
+public class Chat {
     @FXML
     private Button toggleBell;
     @FXML
