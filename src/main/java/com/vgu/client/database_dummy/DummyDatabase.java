@@ -16,7 +16,7 @@ public class DummyDatabase {
     private static User_dummy currentUser;
 
     static {
-        // 1. Tạo danh sách Users mẫu
+        // Default user for testing
         User_dummy u1 = new User_dummy("u1", "@minh_vgu", "Minh Nguyễn", "Sinh viên CSE @ VGU. Đang làm đồ án JavaFX Chat App!", true);
         User_dummy u2 = new User_dummy("u2", "@lan_anh", "Lan Anh", "UI/UX Designer. Thích uống trà sữa và mèo.", true);
         User_dummy u3 = new User_dummy("u3", "@hoang_tran", "Hoàng Trần", "Backend Developer. Ngủ ngày cày đêm.", false);
@@ -24,9 +24,8 @@ public class DummyDatabase {
         users.add(u1);
         users.add(u2);
         users.add(u3);
-        currentUser = u1; // Mặc định đăng nhập là Minh Nguyễn
+        currentUser = u1;
 
-        // 2. Tạo các cuộc hội thoại mẫu
         Conversation_dummy c1 = new Conversation_dummy("c1", "VGU Project Team", true, 2, null);
         c1.addMessage(new Message_dummy("m1", u2, "Mọi người ơi, giao diện FXML mình đẩy lên Git rồi nhé!", LocalDateTime.now().minusMinutes(30)));
         c1.addMessage(new Message_dummy("m2", u3, "Ok để mình ghép phần Socket và Database vào.", LocalDateTime.now().minusMinutes(25)));

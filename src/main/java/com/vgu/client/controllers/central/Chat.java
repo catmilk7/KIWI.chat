@@ -4,13 +4,20 @@ import com.vgu.client.database_dummy.DummyDatabase;
 import com.vgu.client.models.messaging.Conversation_dummy;
 import com.vgu.client.models.messaging.Message_dummy;
 import com.vgu.client.models.identity.User_dummy;
+import com.vgu.client.controllers.central.Settings_group;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.geometry.Insets;
 import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.effect.GaussianBlur;
+import javafx.scene.control.SplitPane;
+import javafx.scene.layout.AnchorPane;
+import javafx.animation.FadeTransition;
+import javafx.util.Duration;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -20,6 +27,7 @@ import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import org.kordamp.ikonli.javafx.FontIcon;
+import java.io.IOException;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -61,6 +69,12 @@ public class Chat {
     @FXML private FontIcon bell;
     private boolean isToggled = false;
 
+    @FXML
+    private AnchorPane rootPane;
+    @FXML
+    private SplitPane mainSplitPane;
+    private Parent currentOverlay;
+
     private Conversation_dummy activeConversation;
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
 
@@ -68,7 +82,6 @@ public class Chat {
     public void initialize() {
         hideAllFloatingMenus();
 
-        // Hiển thị tên user đang đăng nhập ở góc dưới bên trái
         User_dummy currentUser = DummyDatabase.getCurrentUser();
         if (currentUserNameLabel != null && currentUser != null) {
             currentUserNameLabel.setText(currentUser.getDisplayName());
@@ -104,7 +117,6 @@ public class Chat {
     private void renderContactList(List<Conversation_dummy> conversations) {
         if (contactListContainer == null) return;
 
-        // Giữ lại nút "Create a group chat" ở vị trí đầu tiên
         Node createGroupBtn = contactListContainer.getChildren().isEmpty() ? null : contactListContainer.getChildren().get(0);
         contactListContainer.getChildren().clear();
         if (createGroupBtn != null) {
@@ -126,14 +138,6 @@ public class Chat {
                 + (isSelected ? "-color-bg-subtle;" : "transparent;"));
 
         ImageView avatar = createCircularAvatar("/com/vgu/client/ui/assets/default/anon_sender.png", 45.0);
-        if (!conv.isGroup() && conv.getTargetUser() != null) {
-            avatar.setOnMouseClicked(e -> {
-                if (e.getButton() == MouseButton.PRIMARY) {
-                    showUserProfile(conv.getTargetUser(), e.getSceneX(), e.getSceneY());
-                    e.consume();
-                }
-            });
-        }
 
         VBox textCol = new VBox(2.0);
         textCol.setAlignment(Pos.CENTER_LEFT);
@@ -463,5 +467,104 @@ public class Chat {
         Circle clip = new Circle(size / 2.0, size / 2.0, size / 2.0);
         imageView.setClip(clip);
         return imageView;
+    }
+
+    @FXML
+    private void openCreateGroupModal() {
+        hideAllFloatingMenus();
+        showModal("group_create.view.fxml");
+    }
+
+    @FXML
+    private void openUserSettingsModal() {
+        hideAllFloatingMenus();
+        showModal("settings_user.view.fxml");
+    }
+
+    @FXML
+    private void openGroupSettingsModal() {
+        hideAllFloatingMenus();
+        showModal("settings_group.view.fxml");
+    }
+
+    @FXML
+    private void openWarningModal() {
+        hideAllFloatingMenus();
+        showModal("warning.view.fxml");
+    }
+
+    public void showModal(String fxmlFileName) {
+        try {
+            String path = "/com/vgu/client/ui/views/settings/" + fxmlFileName;
+            var resourceUrl = getClass().getResource(path);
+            if (resourceUrl == null) {
+                System.err.println("Không tìm thấy file FXML: " + path);
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            currentOverlay = loader.load();
+
+            Object controller = loader.getController();
+            if (controller instanceof Handling baseController) {
+                baseController.setOnCloseCallback(this::closeOverlay);
+            }
+
+            AnchorPane.setTopAnchor(currentOverlay, 0.0);
+            AnchorPane.setBottomAnchor(currentOverlay, 0.0);
+            AnchorPane.setLeftAnchor(currentOverlay, 0.0);
+            AnchorPane.setRightAnchor(currentOverlay, 0.0);
+
+            mainSplitPane.setEffect(new GaussianBlur(12.0));
+
+            if (!rootPane.getChildren().contains(currentOverlay)) {
+                currentOverlay.setOpacity(0);
+                rootPane.getChildren().add(currentOverlay);
+
+                FadeTransition fadeIn = new FadeTransition(Duration.millis(180), currentOverlay);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.play();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void closeOverlay() {
+        if (currentOverlay != null && rootPane.getChildren().contains(currentOverlay)) {
+            FadeTransition fadeOut = new FadeTransition(Duration.millis(150), currentOverlay);
+            fadeOut.setFromValue(1.0);
+            fadeOut.setToValue(0.0);
+            fadeOut.setOnFinished(e -> {
+                rootPane.getChildren().remove(currentOverlay);
+                mainSplitPane.setEffect(null);
+            });
+            fadeOut.play();
+        }
+    }
+
+    public void showErrorModal(String errorMessage, String subtext) {
+        hideAllFloatingMenus();
+        try {
+            String path = "/com/vgu/client/ui/views/settings/warning.view.fxml";
+            FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
+            currentOverlay = loader.load();
+
+            if (loader.getController() instanceof Warning warningController) {
+                warningController.setupAsError(errorMessage, subtext);
+                warningController.setOnCloseCallback(this::closeOverlay);
+            }
+
+            AnchorPane.setTopAnchor(currentOverlay, 0.0);
+            AnchorPane.setBottomAnchor(currentOverlay, 0.0);
+            AnchorPane.setLeftAnchor(currentOverlay, 0.0);
+            AnchorPane.setRightAnchor(currentOverlay, 0.0);
+
+            mainSplitPane.setEffect(new GaussianBlur(12.0));
+            rootPane.getChildren().add(currentOverlay);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

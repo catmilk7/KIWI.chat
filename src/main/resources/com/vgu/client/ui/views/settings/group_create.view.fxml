@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.Separator?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.Image?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.shape.Circle?>
+<?import org.kordamp.ikonli.javafx.FontIcon?>
+
+<StackPane fx:id="overlayRoot" onMouseClicked="#handleOverlayClick" prefHeight="800.0" prefWidth="1200.0"
+           style="-fx-background-color: rgba(15, 23, 42, 0.45);"
+           stylesheets="@/com/vgu/client/ui/assets/style.css"
+           xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
+           fx:controller="com.vgu.client.controllers.central.Settings_group">
+    <children>
+        <!-- MODAL CARD -->
+        <VBox fx:id="modalCard" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="440.0" spacing="16.0"
+              style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 20, 0, 0, 8);">
+            <padding>
+                <Insets bottom="24.0" left="24.0" right="24.0" top="20.0" />
+            </padding>
+            <children>
+                <!-- HEADER -->
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <children>
+                        <HBox alignment="CENTER" prefHeight="36.0" prefWidth="36.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 18;">
+                            <children>
+                                <FontIcon iconColor="#475569" iconLiteral="fas-users" iconSize="16" />
+                            </children>
+                        </HBox>
+                        <VBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Create a new group chat!" />
+                                <Label style="-fx-font-size: 12px; -fx-text-fill: #64748b;" text="Connect with multiple friends at once" />
+                            </children>
+                        </VBox>
+                        <Region HBox.hgrow="ALWAYS" />
+                        <Button fx:id="closeBtn" mnemonicParsing="false" onAction="#handleClose" styleClass="button-icon">
+                            <graphic>
+                                <FontIcon iconColor="#64748b" iconLiteral="fas-times" iconSize="16" />
+                            </graphic>
+                        </Button>
+                    </children>
+                </HBox>
+
+                <Separator />
+
+                <!-- Group Avatar, Name -->
+                <HBox alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
+                    <children>
+                        <StackPane style="-fx-cursor: hand;">
+                            <children>
+                                <ImageView fx:id="groupAvatarImg" fitHeight="56.0" fitWidth="56.0" pickOnBounds="true" preserveRatio="true">
+                                    <image>
+                                        <Image url="@../../assets/default/anon_sender.png" />
+                                    </image>
+                                    <clip>
+                                        <Circle centerX="28.0" centerY="28.0" radius="28.0" />
+                                    </clip>
+                                </ImageView>
+                            </children>
+                        </StackPane>
+                        <VBox alignment="CENTER_LEFT" spacing="6.0" HBox.hgrow="ALWAYS">
+                            <children>
+                                <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #475569;" text="GROUP'S NAME" />
+                                <TextField fx:id="groupNameField" promptText="Enter group name..." HBox.hgrow="ALWAYS" />
+                            </children>
+                        </VBox>
+                    </children>
+                </HBox>
+
+                <!-- Friend list -->
+                <VBox spacing="8.0" VBox.vgrow="ALWAYS">
+                    <children>
+                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="ADD FRIENDS TO YOUR GROUP" />
+
+                        <ScrollPane fitToWidth="true" prefHeight="220.0" style="-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: lightgray; -fx-border-radius: 8; -fx-background-radius: 8;">
+                            <content>
+                                <VBox fx:id="friendsListContainer" spacing="6.0">
+                                    <padding>
+                                        <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
+                                    </padding>
+                                    <children>
+                                        <!-- For testing -->
+                                        <HBox alignment="CENTER_LEFT" prefHeight="52.0" spacing="12.0"
+                                              style="-fx-padding: 6 12; -fx-background-color: -color-bg-default; -fx-background-radius: 8; -fx-border-color: #f1f5f9; -fx-border-radius: 8; -fx-cursor: hand;">
+                                            <children>
+                                                <ImageView fitHeight="38.0" fitWidth="38.0" pickOnBounds="true" preserveRatio="true">
+                                                    <image>
+                                                        <Image url="@../../assets/default/anon_user.png" />
+                                                    </image>
+                                                    <clip>
+                                                        <Circle centerX="19.0" centerY="19.0" radius="19.0" />
+                                                    </clip>
+                                                </ImageView>
+                                                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="default" />
+                                                <Region HBox.hgrow="ALWAYS" />
+                                                <CheckBox mnemonicParsing="false" />
+                                            </children>
+                                        </HBox>
+                                    </children>
+                                </VBox>
+                            </content>
+                        </ScrollPane>
+                    </children>
+                </VBox>
+
+                <!-- Buttons -->
+                <HBox alignment="CENTER_RIGHT" spacing="10.0">
+                    <padding>
+                        <Insets top="4.0" />
+                    </padding>
+                    <children>
+                        <Button fx:id="cancelBtn" mnemonicParsing="false" onAction="#handleClose"
+                                style="-fx-background-color: transparent; -fx-border-color: lightgray; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 8 18; -fx-cursor: hand; -fx-font-weight: bold; -fx-text-fill: #475569;"
+                                text="Cancel" />
+                        <Button fx:id="createBtn" mnemonicParsing="false" onAction="#handleCreateGroup"
+                                style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 8 20; -fx-cursor: hand; -fx-font-weight: bold;"
+                                text="Create Group">
+                        </Button>
+                    </children>
+                </HBox>
+            </children>
+        </VBox>
+    </children>
+</StackPane>

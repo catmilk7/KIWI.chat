@@ -18,9 +18,9 @@
 <?import javafx.scene.shape.Circle?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<AnchorPane minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.controllers.central.Chat">
+<AnchorPane fx:id="rootPane" minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.controllers.central.Chat">
     <children>
-        <SplitPane dividerPositions="0.25" prefHeight="800.0" prefWidth="1200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+        <SplitPane fx:id="mainSplitPane" dividerPositions="0.25" prefHeight="800.0" prefWidth="1200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <items>
                 <!-- LEFT PANEL: Contacts & Groups -->
                 <AnchorPane maxWidth="360.0" minWidth="240.0" prefHeight="200.0" prefWidth="300.0">
@@ -51,7 +51,7 @@
                                             </padding>
                                             <children>
                                                 <!-- Action: Create Group Chat -->
-                                                <HBox alignment="CENTER_LEFT" prefHeight="60.0" prefWidth="200.0" spacing="12.0" style="-fx-cursor: hand; -fx-padding: 5; -fx-background-radius: 8; -fx-border-color: lightgray; -fx-border-style: dashed; -fx-border-radius: 8; -fx-border-width: 1;">
+                                                <HBox onMouseClicked="#openCreateGroupModal" alignment="CENTER_LEFT" prefHeight="60.0" prefWidth="200.0" spacing="12.0" style="-fx-cursor: hand; -fx-padding: 5; -fx-background-radius: 8; -fx-border-color: lightgray; -fx-border-style: dashed; -fx-border-radius: 8; -fx-border-width: 1;">
                                                     <children>
                                                         <HBox alignment="CENTER" prefHeight="45.0" prefWidth="45.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 22.5;">
                                                             <children>
@@ -92,7 +92,7 @@
                                                 <FontIcon iconLiteral="fas-users" />
                                             </graphic>
                                         </Button>
-                                        <Button mnemonicParsing="false" styleClass="button-icon">
+                                        <Button onAction="#openUserSettingsModal" mnemonicParsing="false" styleClass="button-icon">
                                             <graphic>
                                                 <FontIcon iconLiteral="fas-cog" />
                                             </graphic>
@@ -144,9 +144,9 @@
 
                                         <Region HBox.hgrow="ALWAYS" />
 
-                                        <Button mnemonicParsing="false" styleClass="button-icon">
+                                        <Button onAction="#openGroupSettingsModal" visible="true" managed="true" styleClass="button-icon">
                                             <graphic>
-                                                <FontIcon iconLiteral="fas-user-slash" />
+                                                <FontIcon iconLiteral="fas-cog" />
                                             </graphic>
                                         </Button>
                                         <Button mnemonicParsing="false" onAction="#toggleHeaderMenu" styleClass="button-icon">
