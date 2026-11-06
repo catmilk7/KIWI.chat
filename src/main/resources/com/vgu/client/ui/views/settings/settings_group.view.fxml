@@ -21,19 +21,17 @@
            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.vgu.client.controllers.central.Settings_group">
     <children>
-        <!-- MODAL CARD -->
         <VBox fx:id="modalCard" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="460.0" spacing="16.0"
               style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 20, 0, 0, 8);">
             <padding>
                 <Insets bottom="24.0" left="24.0" right="24.0" top="20.0" />
             </padding>
             <children>
-                <!-- HEADER -->
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <children>
                         <HBox alignment="CENTER" prefHeight="36.0" prefWidth="36.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 18;">
                             <children>
-                                <FontIcon iconColor="#475569" iconLiteral="fas-users-cog" iconSize="16" />
+                                <FontIcon style="-fx-icon-color: #475569;" iconLiteral="fas-users-cog" iconSize="16" />
                             </children>
                         </HBox>
                         <VBox alignment="CENTER_LEFT">
@@ -45,7 +43,7 @@
                         <Region HBox.hgrow="ALWAYS" />
                         <Button fx:id="closeBtn" mnemonicParsing="false" onAction="#handleClose" styleClass="button-icon">
                             <graphic>
-                                <FontIcon iconColor="#64748b" iconLiteral="fas-times" iconSize="16" />
+                                <FontIcon style="-fx-icon-color: #64748b;" iconLiteral="fas-times" iconSize="16" />
                             </graphic>
                         </Button>
                     </children>
@@ -53,14 +51,13 @@
 
                 <Separator />
 
-                <!-- Group Avatar, Name & ID -->
                 <HBox alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
                     <children>
                         <StackPane style="-fx-cursor: hand;">
                             <children>
                                 <ImageView fx:id="groupAvatarImg" fitHeight="64.0" fitWidth="64.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="@../../assets/default/anon_sender.png" />
+                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                     </image>
                                     <clip>
                                         <Circle centerX="32.0" centerY="32.0" radius="32.0" />
@@ -75,7 +72,7 @@
                                 <HBox alignment="CENTER_LEFT" spacing="6.0">
                                     <children>
                                         <Label style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="ID:" />
-                                        <Label fx:id="groupIdLabel" style="-fx-font-size: 11px; -fx-font-family: monospace; -fx-text-fill: #94a3b8;" text="01a16e5f-6a79-7773-a0ff-82e38a3e6020" />
+                                        <Label fx:id="groupIdLabel" style="-fx-font-size: 11px; -fx-font-family: monospace; -fx-text-fill: #94a3b8;" text="" />
                                     </children>
                                 </HBox>
                             </children>
@@ -83,7 +80,6 @@
                     </children>
                 </HBox>
 
-                <!-- Member List -->
                 <VBox spacing="6.0">
                     <children>
                         <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="MEMBER LIST" />
@@ -99,13 +95,13 @@
                                             <children>
                                                 <ImageView fitHeight="36.0" fitWidth="36.0" pickOnBounds="true" preserveRatio="true">
                                                     <image>
-                                                        <Image url="@../../assets/default/anon_user.png" />
+                                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                                     </image>
                                                     <clip>
                                                         <Circle centerX="18.0" centerY="18.0" radius="18.0" />
                                                     </clip>
                                                 </ImageView>
-                                                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="@default" />
+                                                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="" />
                                                 <Region HBox.hgrow="ALWAYS" />
 
                                                 <Button minWidth="-Infinity" mnemonicParsing="false"
@@ -120,40 +116,27 @@
                     </children>
                 </VBox>
 
-                <!-- Add More Friends -->
+                <!-- Group Invite Code Generator & Countdown -->
                 <VBox spacing="6.0">
                     <children>
-                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="CONSIDERING ADDING MORE FRIENDS?" />
-                        <ScrollPane fitToWidth="true" prefHeight="135.0" style="-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: lightgray; -fx-border-radius: 8; -fx-background-radius: 8;">
-                            <content>
-                                <VBox fx:id="addFriendsContainer" spacing="6.0">
-                                    <padding>
-                                        <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
-                                    </padding>
+                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="GROUP INVITE CODE" />
+                        <HBox alignment="CENTER_LEFT" spacing="10.0" style="-fx-background-color: #f8fafc; -fx-padding: 10 14; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
+                            <children>
+                                <VBox spacing="2.0" HBox.hgrow="ALWAYS">
                                     <children>
-                                        <!-- MẪU ITEM THÊM BẠN BÈ -->
-                                        <HBox alignment="CENTER_LEFT" prefHeight="48.0" spacing="12.0"
-                                              style="-fx-padding: 6 12; -fx-background-color: -color-bg-default; -fx-background-radius: 8; -fx-border-color: #f1f5f9; -fx-border-radius: 8;">
-                                            <children>
-                                                <ImageView fitHeight="36.0" fitWidth="36.0" pickOnBounds="true" preserveRatio="true">
-                                                    <image>
-                                                        <Image url="@../../assets/default/anon_user.png" />
-                                                    </image>
-                                                    <clip>
-                                                        <Circle centerX="18.0" centerY="18.0" radius="18.0" />
-                                                    </clip>
-                                                </ImageView>
-                                                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="@default" />
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <Button mnemonicParsing="false"
-                                                        style="-fx-background-color: #f0fdf4; -fx-text-fill: #16a34a; -fx-border-color: #bbf7d0; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 4 14; -fx-font-size: 12px; -fx-font-weight: bold; -fx-cursor: hand;"
-                                                        text="Add" />
-                                            </children>
-                                        </HBox>
+                                        <Label fx:id="inviteCodeLabel" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-font-family: monospace; -fx-text-fill: -color-accent-emphasis;" text="X8K92A" />
+                                        <Label fx:id="countdownLabel" style="-fx-font-size: 11px; -fx-text-fill: #64748b;" text="Expires in 00:00:00" />
                                     </children>
                                 </VBox>
-                            </content>
-                        </ScrollPane>
+                                <Button fx:id="regenCodeBtn" mnemonicParsing="false" onAction="#handleRegenerateCode"
+                                        style="-fx-background-color: #f1f5f9; -fx-border-color: #cbd5e1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 6 12; -fx-cursor: hand; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #475569;"
+                                        text="Regenerate">
+                                    <graphic>
+                                        <FontIcon style="-fx-icon-color: #475569;" iconLiteral="fas-sync-alt" iconSize="12" />
+                                    </graphic>
+                                </Button>
+                            </children>
+                        </HBox>
                     </children>
                 </VBox>
 

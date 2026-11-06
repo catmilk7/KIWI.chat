@@ -22,12 +22,10 @@
     <children>
         <SplitPane fx:id="mainSplitPane" dividerPositions="0.25" prefHeight="800.0" prefWidth="1200.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <items>
-                <!-- LEFT PANEL: Contacts & Groups -->
                 <AnchorPane maxWidth="360.0" minWidth="240.0" prefHeight="200.0" prefWidth="300.0">
                     <children>
                         <VBox prefHeight="798.0" prefWidth="297.0" style="-fx-background-color: -color-bg-default;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                             <children>
-                                <!-- Search Bar -->
                                 <HBox alignment="CENTER_LEFT" prefHeight="55.0" prefWidth="297.0" spacing="10.0" VBox.vgrow="NEVER">
                                     <padding>
                                         <Insets left="10.0" right="10.0" />
@@ -42,7 +40,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Contact List -->
                                 <ScrollPane fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" VBox.vgrow="ALWAYS">
                                     <content>
                                         <VBox fx:id="contactListContainer" spacing="8.0">
@@ -50,7 +47,6 @@
                                                 <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                                             </padding>
                                             <children>
-                                                <!-- Action: Create Group Chat -->
                                                 <HBox onMouseClicked="#openCreateGroupModal" alignment="CENTER_LEFT" prefHeight="60.0" prefWidth="200.0" spacing="12.0" style="-fx-cursor: hand; -fx-padding: 5; -fx-background-radius: 8; -fx-border-color: lightgray; -fx-border-style: dashed; -fx-border-radius: 8; -fx-border-width: 1;">
                                                     <children>
                                                         <HBox alignment="CENTER" prefHeight="45.0" prefWidth="45.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 22.5;">
@@ -60,7 +56,7 @@
                                                         </HBox>
                                                         <VBox alignment="CENTER_LEFT" HBox.hgrow="ALWAYS">
                                                             <children>
-                                                                <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Create a group chat" />
+                                                                <Label style="-fx-font-weight: bold; -fx-text-fill: #475569;" text="Create/Join a group chat" />
                                                             </children>
                                                         </VBox>
                                                     </children>
@@ -70,7 +66,6 @@
                                     </content>
                                 </ScrollPane>
 
-                                <!-- Bottom Profile Section -->
                                 <HBox alignment="CENTER_LEFT" prefHeight="65.0" prefWidth="297.0" spacing="10.0" style="-fx-border-color: lightgray; -fx-border-width: 1 0 0 0;">
                                     <padding>
                                         <Insets left="10.0" right="10.0" />
@@ -78,7 +73,7 @@
                                     <children>
                                         <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
-                                                <Image url="@../../assets/default/anon_user.png" />
+                                                <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                             </image>
                                             <clip>
                                                 <Circle centerX="20.0" centerY="20.0" radius="20.0" />
@@ -107,18 +102,15 @@
                             </children>
                         </VBox>
 
-                        <!-- FLOATING USER'S ACCOUNTS -->
                         <VBox fx:id="usersAccounts" managed="false" prefWidth="200.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false" AnchorPane.bottomAnchor="70.0" AnchorPane.rightAnchor="10.0">
                         </VBox>
                     </children>
                 </AnchorPane>
 
-                <!-- RIGHT PANEL: Chat Area -->
                 <AnchorPane prefHeight="200.0" prefWidth="200.0">
                     <children>
                         <VBox prefHeight="798.0" prefWidth="869.0" style="-fx-background-image: url('/com/vgu/client/ui/assets/background/kiwi_main.png'); -fx-background-size: cover; -fx-background-position: center center;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                             <children>
-                                <!-- Chat Header -->
                                 <HBox alignment="CENTER_LEFT" prefHeight="65.0" prefWidth="869.0" spacing="10.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 0 0 1 0;">
                                     <padding>
                                         <Insets left="20.0" right="20.0" />
@@ -126,7 +118,7 @@
                                     <children>
                                         <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
-                                                <Image url="@../../assets/default/anon_sender.png" />
+                                                <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                             </image>
                                             <clip>
                                                 <Circle centerX="20.0" centerY="20.0" radius="20.0" />
@@ -157,7 +149,6 @@
                                     </children>
                                 </HBox>
 
-                                <!-- Chat Messages Area -->
                                 <ScrollPane fx:id="messagesScrollPane" fitToWidth="true" style="-fx-background: transparent; -fx-background-color: transparent;" VBox.vgrow="ALWAYS">
                                     <content>
                                         <VBox fx:id="messagesContainer" spacing="20.0" style="-fx-background-color: transparent;">
@@ -168,7 +159,6 @@
                                     </content>
                                 </ScrollPane>
 
-                                <!-- Message Input Box -->
                                 <HBox alignment="CENTER" prefHeight="80.0" prefWidth="869.0" spacing="15.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 1 0 0 0;">
                                     <padding>
                                         <Insets left="20.0" right="20.0" />
@@ -184,7 +174,7 @@
 
                                         <Button fx:id="sendBtn" mnemonicParsing="false" onAction="#handleSendMessage" style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-background-radius: 25; -fx-min-width: 40; -fx-min-height: 40;">
                                             <graphic>
-                                                <FontIcon iconColor="white" iconLiteral="fas-paper-plane" />
+                                                <FontIcon style="-fx-icon-color: #FFFFFF;" iconLiteral="fas-paper-plane" />
                                             </graphic>
                                         </Button>
                                     </children>
@@ -192,35 +182,33 @@
                             </children>
                         </VBox>
 
-                        <!-- FLOATING ATTACHMENTS MENU -->
                         <VBox fx:id="attachmentsMenu" managed="false" prefWidth="175.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false" AnchorPane.bottomAnchor="85.0" AnchorPane.rightAnchor="60.0">
                             <children>
                                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Attach file(s)">
                                     <graphic>
-                                        <FontIcon iconColor="#808080" iconLiteral="fas-file" />
+                                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-file" />
                                     </graphic>
                                 </Button>
 
                                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Attach voice">
                                     <graphic>
-                                        <FontIcon iconColor="#808080" iconLiteral="fas-microphone" />
+                                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-microphone" />
                                     </graphic>
                                 </Button>
                             </children>
                         </VBox>
 
-                        <!-- FLOATING USER'S MENU -->
                         <VBox fx:id="usersMenu" managed="false" prefWidth="175.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false" AnchorPane.rightAnchor="10.0" AnchorPane.topAnchor="70.0">
                             <children>
                                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Report user">
                                     <graphic>
-                                        <FontIcon iconColor="#808080" iconLiteral="fas-flag" />
+                                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-flag" />
                                     </graphic>
                                 </Button>
 
                                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Remove user">
                                     <graphic>
-                                        <FontIcon iconColor="#808080" iconLiteral="fas-user-minus" />
+                                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-user-minus" />
                                     </graphic>
                                 </Button>
                             </children>
@@ -230,50 +218,46 @@
             </items>
         </SplitPane>
 
-        <!-- FLOATING MESSAGES MENU -->
         <VBox fx:id="messagesMenu" managed="false" prefWidth="125.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false">
             <children>
                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Reply">
                     <graphic>
-                        <FontIcon iconColor="#808080" iconLiteral="fas-reply" />
+                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-reply" />
                     </graphic>
                 </Button>
 
                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Forward">
                     <graphic>
-                        <FontIcon iconColor="#808080" iconLiteral="fas-share" />
+                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-share" />
                     </graphic>
                 </Button>
 
                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Remove">
                     <graphic>
-                        <FontIcon iconColor="#808080" iconLiteral="fas-trash" />
+                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-trash" />
                     </graphic>
                 </Button>
             </children>
         </VBox>
 
-        <!-- FLOATING GROUP'S MENU -->
         <VBox fx:id="groupsMenu" managed="false" prefWidth="175.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false">
             <children>
                 <Button fx:id="toggleBell" alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" onAction="#handleNotification" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Mute">
                     <graphic>
-                        <FontIcon fx:id="bell" iconColor="#808080" iconLiteral="fas-bell-slash" />
+                        <FontIcon fx:id="bell" style="-fx-icon-color: #808080;" iconLiteral="fas-bell-slash" />
                     </graphic>
                 </Button>
 
                 <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Leave">
                     <graphic>
-                        <FontIcon iconColor="#808080" iconLiteral="fas-sign-out-alt" />
+                        <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-sign-out-alt" />
                     </graphic>
                 </Button>
             </children>
         </VBox>
 
-        <!-- FLOATING USER'S PROFILE -->
         <VBox fx:id="usersProfile" managed="false" prefWidth="340.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false">
             <children>
-                <!-- Header Section: Banner & Avatar -->
                 <AnchorPane prefHeight="110.0">
                     <children>
                         <Region prefHeight="65.0" style="-fx-background-color: -color-accent-emphasis; -fx-background-radius: 7 7 0 0;" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0" />
@@ -282,7 +266,7 @@
                             <children>
                                 <ImageView fitHeight="75.0" fitWidth="75.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="@../../assets/default/anon_user.png" />
+                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                     </image>
                                     <clip>
                                         <Circle centerX="37.5" centerY="37.5" radius="37.5" />
@@ -299,7 +283,6 @@
                     </children>
                 </AnchorPane>
 
-                <!-- User Information Section -->
                 <VBox spacing="15.0">
                     <padding>
                         <Insets bottom="20.0" left="20.0" right="20.0" top="5.0" />
@@ -307,17 +290,8 @@
                     <children>
                         <VBox spacing="2.0">
                             <children>
-                                <Label fx:id="profileDisplayName" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="User Name" />
-                                <Label fx:id="profileUsername" style="-fx-font-size: 14px;" text="@username" textFill="#a1a1aa" />
-                            </children>
-                        </VBox>
-
-                        <Separator />
-
-                        <VBox spacing="8.0">
-                            <children>
-                                <Label style="-fx-font-size: 12px; -fx-font-weight: bold;" text="ABOUT ME" textFill="#a1a1aa" />
-                                <Label fx:id="profileBio" style="-fx-font-size: 14px; -fx-line-spacing: 2px;" text="No bio available." wrapText="true" />
+                                <Label fx:id="profileDisplayName" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="" />
+                                <Label fx:id="profileUsername" style="-fx-font-size: 14px;" text="" textFill="#a1a1aa" />
                             </children>
                         </VBox>
                     </children>

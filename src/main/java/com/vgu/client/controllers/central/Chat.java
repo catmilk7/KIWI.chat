@@ -4,7 +4,7 @@ import com.vgu.client.database_dummy.DummyDatabase;
 import com.vgu.client.models.messaging.Conversation_dummy;
 import com.vgu.client.models.messaging.Message_dummy;
 import com.vgu.client.models.identity.User_dummy;
-import com.vgu.client.controllers.central.Settings_group;
+
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,6 +21,7 @@ import javafx.util.Duration;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.CacheHint;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
 import javafx.scene.layout.*;
@@ -138,6 +139,7 @@ public class Chat {
                 + (isSelected ? "-color-bg-subtle;" : "transparent;"));
 
         ImageView avatar = createCircularAvatar("/com/vgu/client/ui/assets/default/anon_sender.png", 45.0);
+        avatar.setSmooth(true);
 
         VBox textCol = new VBox(2.0);
         textCol.setAlignment(Pos.CENTER_LEFT);
@@ -227,7 +229,11 @@ public class Chat {
         String avatarPath = isMe
                 ? "/com/vgu/client/ui/assets/default/anon_user.png"
                 : "/com/vgu/client/ui/assets/default/anon_sender.png";
+
         ImageView avatar = createCircularAvatar(avatarPath, 40.0);
+        avatar.setSmooth(true);
+        avatar.setCache(true);
+        avatar.setCacheHint(CacheHint.QUALITY);
         avatar.setStyle("-fx-cursor: hand;");
         avatar.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY) {
@@ -321,9 +327,7 @@ public class Chat {
         btn.setGraphicTextGap(12.0);
         btn.setMaxWidth(Double.MAX_VALUE);
         btn.setAlignment(Pos.BASELINE_LEFT);
-
         FontIcon icon = new FontIcon(isCurrent ? "fas-user-check" : "fas-user");
-        icon.setIconColor(isCurrent ? Color.web("#2ecc71") : Color.web("#808080"));
         btn.setGraphic(icon);
 
         String baseStyle = "-fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px; -fx-background-radius: 6; ";
@@ -432,7 +436,6 @@ public class Chat {
     @FXML
     private void toggleHeaderMenu() {
         if (activeConversation != null && activeConversation.isGroup()) {
-            // Đặt vị trí cố định ở góc phải dưới Header nếu mở từ nút 3 chấm
             AnchorPane.clearConstraints(groupsMenu);
             AnchorPane.setTopAnchor(groupsMenu, 70.0);
             AnchorPane.setRightAnchor(groupsMenu, 20.0);
@@ -484,7 +487,11 @@ public class Chat {
     @FXML
     private void openGroupSettingsModal() {
         hideAllFloatingMenus();
-        showModal("settings_group.view.fxml");
+        if (activeConversation != null && activeConversation.isGroup()) {
+            showGroupSettingsModal(activeConversation);
+        } else {
+            showModal("settings_group.view.fxml");
+        }
     }
 
     @FXML
@@ -498,7 +505,7 @@ public class Chat {
             String path = "/com/vgu/client/ui/views/settings/" + fxmlFileName;
             var resourceUrl = getClass().getResource(path);
             if (resourceUrl == null) {
-                System.err.println("Không tìm thấy file FXML: " + path);
+                System.err.println("The FXML file can't be found: " + path);
                 return;
             }
 
@@ -541,6 +548,44 @@ public class Chat {
                 mainSplitPane.setEffect(null);
             });
             fadeOut.play();
+        }
+    }
+
+    private void showGroupSettingsModal(Conversation_dummy group) {
+        try {
+            String path = "/com/vgu/client/ui/views/settings/settings_group.view.fxml";
+            var resourceUrl = getClass().getResource(path);
+            if (resourceUrl == null) return;
+
+            FXMLLoader loader = new FXMLLoader(resourceUrl);
+            currentOverlay = loader.load();
+
+            Object controller = loader.getController();
+            if (controller instanceof Handling baseController) {
+                baseController.setOnCloseCallback(this::closeOverlay);
+            }
+            if (controller instanceof Settings_group groupController) {
+                groupController.setTargetGroup(group);
+            }
+
+            AnchorPane.setTopAnchor(currentOverlay, 0.0);
+            AnchorPane.setBottomAnchor(currentOverlay, 0.0);
+            AnchorPane.setLeftAnchor(currentOverlay, 0.0);
+            AnchorPane.setRightAnchor(currentOverlay, 0.0);
+
+            mainSplitPane.setEffect(new GaussianBlur(12.0));
+
+            if (!rootPane.getChildren().contains(currentOverlay)) {
+                currentOverlay.setOpacity(0);
+                rootPane.getChildren().add(currentOverlay);
+
+                FadeTransition fadeIn = new FadeTransition(Duration.millis(180), currentOverlay);
+                fadeIn.setFromValue(0.0);
+                fadeIn.setToValue(1.0);
+                fadeIn.play();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

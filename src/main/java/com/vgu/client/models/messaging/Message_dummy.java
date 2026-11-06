@@ -9,6 +9,7 @@ public class Message_dummy {
     private String content;
     private LocalDateTime timestamp;
 
+
     public Message_dummy(String id, User_dummy sender, String content, LocalDateTime timestamp) {
         this.id = id;
         this.sender = sender;

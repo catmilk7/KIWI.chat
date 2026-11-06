@@ -21,6 +21,8 @@ import java.util.Random;
 public class Secure {
 
     @FXML
+    private TextField displayNameField;
+    @FXML
     private TextField usernameField;
     @FXML
     private PasswordField passwordField;
@@ -159,12 +161,16 @@ public class Secure {
 
     @FXML
     private void handleRegister(ActionEvent event) {
+        String displayName = displayNameField.getText();
         String username = usernameField.getText();
         String password = passwordField.getText();
         String confirmPassword = confirmField.getText();
 
-        if (username == null || username.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()){
+        if (displayName == null || displayName.isBlank() || username == null || username.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()){
             errorMessage.setText("Please fill in all required fields.");
+            errorMessage.setVisible(true);
+        } else if (!checkUsername(username)){
+            errorMessage.setText("Username contains illegal characters.");
             errorMessage.setVisible(true);
         } else if (!password.equals(confirmPassword)) {
             errorMessage.setText("Passwords do not match. Please try again.");
@@ -176,5 +182,8 @@ public class Secure {
         }
     }
 
+    private boolean checkUsername(String username) {
+        return username.matches("[a-zA-Z0-9_]+");
+    }
     // TO DO:
 }

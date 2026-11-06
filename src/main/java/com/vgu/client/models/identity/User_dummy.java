@@ -5,6 +5,8 @@ public class User_dummy {
     private String username;
     private String displayName;
     private String bio;
+    private String publicKey;
+    private String privateKey;
     private boolean online;
 
     public User_dummy(String id, String username, String displayName, String bio, boolean online) {

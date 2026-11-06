@@ -15,6 +15,7 @@
         <VBox alignment="CENTER" spacing="15.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <children>
 
+                <TextField fx:id="displayNameField" maxWidth="250.0" promptText="Display name" style="-fx-font-size: 16px;" />
                 <TextField fx:id="usernameField" maxWidth="250.0" promptText="Username" style="-fx-font-size: 16px;" />
                 <PasswordField fx:id="passwordField" maxWidth="250.0" promptText="Password" style="-fx-font-size: 16px;" />
                 <PasswordField fx:id="confirmField" maxWidth="250.0" promptText="Repeat your password" style="-fx-font-size: 16px;" />
@@ -25,7 +26,7 @@
                     </styleClass>
                 </Button>
 
-                <Label fx:id="errorMessage" text="Critical error: this error message isn't supposed to be seen!">
+                <Label fx:id="errorMessage" text="">
                     <styleClass>
                         <String fx:value="danger" />
                     </styleClass>

@@ -2,9 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
-<?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.image.Image?>
@@ -22,14 +20,12 @@
            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.vgu.client.controllers.central.Settings_group">
     <children>
-        <!-- MODAL CARD -->
         <VBox fx:id="modalCard" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="440.0" spacing="16.0"
               style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 20, 0, 0, 8);">
             <padding>
                 <Insets bottom="24.0" left="24.0" right="24.0" top="20.0" />
             </padding>
             <children>
-                <!-- HEADER -->
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <children>
                         <HBox alignment="CENTER" prefHeight="36.0" prefWidth="36.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 18;">
@@ -39,8 +35,8 @@
                         </HBox>
                         <VBox alignment="CENTER_LEFT">
                             <children>
-                                <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Create a new group chat!" />
-                                <Label style="-fx-font-size: 12px; -fx-text-fill: #64748b;" text="Connect with multiple friends at once" />
+                                <Label style="-fx-font-size: 18px; -fx-font-weight: bold;" text="Create or Join Group" />
+                                <Label style="-fx-font-size: 12px; -fx-text-fill: #64748b;" text="Create a new group or join one" />
                             </children>
                         </VBox>
                         <Region HBox.hgrow="ALWAYS" />
@@ -54,14 +50,13 @@
 
                 <Separator />
 
-                <!-- Group Avatar, Name -->
                 <HBox alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
                     <children>
                         <StackPane style="-fx-cursor: hand;">
                             <children>
                                 <ImageView fx:id="groupAvatarImg" fitHeight="56.0" fitWidth="56.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="@../../assets/default/anon_sender.png" />
+                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
                                     </image>
                                     <clip>
                                         <Circle centerX="28.0" centerY="28.0" radius="28.0" />
@@ -78,43 +73,13 @@
                     </children>
                 </HBox>
 
-                <!-- Friend list -->
-                <VBox spacing="8.0" VBox.vgrow="ALWAYS">
+                <VBox spacing="6.0">
                     <children>
-                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="ADD FRIENDS TO YOUR GROUP" />
-
-                        <ScrollPane fitToWidth="true" prefHeight="220.0" style="-fx-background: transparent; -fx-background-color: transparent; -fx-border-color: lightgray; -fx-border-radius: 8; -fx-background-radius: 8;">
-                            <content>
-                                <VBox fx:id="friendsListContainer" spacing="6.0">
-                                    <padding>
-                                        <Insets bottom="8.0" left="8.0" right="8.0" top="8.0" />
-                                    </padding>
-                                    <children>
-                                        <!-- For testing -->
-                                        <HBox alignment="CENTER_LEFT" prefHeight="52.0" spacing="12.0"
-                                              style="-fx-padding: 6 12; -fx-background-color: -color-bg-default; -fx-background-radius: 8; -fx-border-color: #f1f5f9; -fx-border-radius: 8; -fx-cursor: hand;">
-                                            <children>
-                                                <ImageView fitHeight="38.0" fitWidth="38.0" pickOnBounds="true" preserveRatio="true">
-                                                    <image>
-                                                        <Image url="@../../assets/default/anon_user.png" />
-                                                    </image>
-                                                    <clip>
-                                                        <Circle centerX="19.0" centerY="19.0" radius="19.0" />
-                                                    </clip>
-                                                </ImageView>
-                                                <Label style="-fx-font-weight: bold; -fx-font-size: 14px;" text="default" />
-                                                <Region HBox.hgrow="ALWAYS" />
-                                                <CheckBox mnemonicParsing="false" />
-                                            </children>
-                                        </HBox>
-                                    </children>
-                                </VBox>
-                            </content>
-                        </ScrollPane>
+                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="OR JOIN VIA INVITE CODE" />
+                        <TextField fx:id="inviteCodeInputField" promptText="Enter invite code (e.g. X8K92A)..." />
                     </children>
                 </VBox>
 
-                <!-- Buttons -->
                 <HBox alignment="CENTER_RIGHT" spacing="10.0">
                     <padding>
                         <Insets top="4.0" />
@@ -125,7 +90,7 @@
                                 text="Cancel" />
                         <Button fx:id="createBtn" mnemonicParsing="false" onAction="#handleCreateGroup"
                                 style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 8 20; -fx-cursor: hand; -fx-font-weight: bold;"
-                                text="Create Group">
+                                text="Submit">
                         </Button>
                     </children>
                 </HBox>
