@@ -1,4 +1,4 @@
-package com.vgu.client.model.crypto;
+package com.vgu.client.models.crypto;
 
 /** Unchecked wrapper for any cryptographic failure (bad key, bad tag, bad padding). */
 public class CryptoException extends RuntimeException {

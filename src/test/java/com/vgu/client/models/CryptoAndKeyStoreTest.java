@@ -1,8 +1,8 @@
-package com.vgu.client.model;
+package com.vgu.client.models;
 
-import com.vgu.client.model.crypto.*;
-import com.vgu.client.model.storage.KeyStoreException;
-import com.vgu.client.model.storage.Pkcs12KeyStore;
+import com.vgu.client.models.crypto.*;
+import com.vgu.client.models.storage.KeyStoreException;
+import com.vgu.client.models.storage.Pkcs12KeyStore;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;

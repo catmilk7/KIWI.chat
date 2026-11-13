@@ -1,6 +1,6 @@
-package com.vgu.client.model.crypto;
+package com.vgu.client.models.crypto;
 
-import com.vgu.client.model.storage.SecureKeyStore;
+import com.vgu.client.models.storage.SecureKeyStore;
 
 import java.security.KeyPair;
 import java.security.PublicKey;

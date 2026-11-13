@@ -1,4 +1,4 @@
-package com.vgu.client.model.crypto;
+package com.vgu.client.models.crypto;
 
 import java.security.KeyPair;
 import java.security.PrivateKey;

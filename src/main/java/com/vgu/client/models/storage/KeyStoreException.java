@@ -1,4 +1,4 @@
-package com.vgu.client.model.storage;
+package com.vgu.client.models.storage;
 
 /** Wrong password, corrupt file, or I/O failure while using the keystore. */
 public class KeyStoreException extends RuntimeException {

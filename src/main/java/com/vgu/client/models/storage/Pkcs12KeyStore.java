@@ -1,4 +1,4 @@
-package com.vgu.client.model.storage;
+package com.vgu.client.models.storage;
 
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
