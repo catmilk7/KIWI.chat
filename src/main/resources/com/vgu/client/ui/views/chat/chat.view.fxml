@@ -73,7 +73,7 @@
                                     <children>
                                         <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
-                                                <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                                <Image url="@/com/vgu/client/ui/assets/default/anon_user.png" />
                                             </image>
                                             <clip>
                                                 <Circle centerX="20.0" centerY="20.0" radius="20.0" />
@@ -92,11 +92,6 @@
                                                 <FontIcon iconLiteral="fas-cog" />
                                             </graphic>
                                         </Button>
-                                        <Button mnemonicParsing="false" styleClass="button-icon">
-                                            <graphic>
-                                                <FontIcon iconLiteral="fas-sign-out-alt" />
-                                            </graphic>
-                                        </Button>
                                     </children>
                                 </HBox>
                             </children>
@@ -111,14 +106,14 @@
                     <children>
                         <VBox prefHeight="798.0" prefWidth="869.0" style="-fx-background-image: url('/com/vgu/client/ui/assets/background/kiwi_main.png'); -fx-background-size: cover; -fx-background-position: center center;" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
                             <children>
-                                <HBox alignment="CENTER_LEFT" prefHeight="65.0" prefWidth="869.0" spacing="10.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 0 0 1 0;">
+                                <HBox fx:id="chatHeader" managed="false" visible="false" alignment="CENTER_LEFT" prefHeight="65.0" prefWidth="869.0" spacing="10.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 0 0 1 0;">
                                     <padding>
                                         <Insets left="20.0" right="20.0" />
                                     </padding>
                                     <children>
-                                        <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
+                                        <ImageView fx:id="activeChatAvatar" fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
-                                                <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                                <Image url="@/com/vgu/client/ui/assets/default/anon_sender.png" />
                                             </image>
                                             <clip>
                                                 <Circle centerX="20.0" centerY="20.0" radius="20.0" />
@@ -136,7 +131,7 @@
 
                                         <Region HBox.hgrow="ALWAYS" />
 
-                                        <Button onAction="#openGroupSettingsModal" visible="true" managed="true" styleClass="button-icon">
+                                        <Button fx:id="groupSettingsBtn" onAction="#openGroupSettingsModal" visible="false" managed="false" styleClass="button-icon">
                                             <graphic>
                                                 <FontIcon iconLiteral="fas-cog" />
                                             </graphic>
@@ -159,7 +154,7 @@
                                     </content>
                                 </ScrollPane>
 
-                                <HBox alignment="CENTER" prefHeight="80.0" prefWidth="869.0" spacing="15.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 1 0 0 0;">
+                                <HBox fx:id="inputBar" managed="false" visible="false" alignment="CENTER" prefHeight="80.0" prefWidth="869.0" spacing="15.0" style="-fx-background-color: -color-bg-default; -fx-border-color: lightgray; -fx-border-width: 1 0 0 0;">
                                     <padding>
                                         <Insets left="20.0" right="20.0" />
                                     </padding>
@@ -184,7 +179,7 @@
 
                         <VBox fx:id="attachmentsMenu" managed="false" prefWidth="175.0" spacing="2.0" style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-padding: 4; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 10, 0, 0, 4);" visible="false" AnchorPane.bottomAnchor="85.0" AnchorPane.rightAnchor="60.0">
                             <children>
-                                <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Attach file(s)">
+                                <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" onAction="#handleAttachFile" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Attach file">
                                     <graphic>
                                         <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-file" />
                                     </graphic>
@@ -248,7 +243,7 @@
                     </graphic>
                 </Button>
 
-                <Button alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Leave">
+                <Button fx:id="leaveMenuBtn" alignment="BASELINE_LEFT" graphicTextGap="12.0" maxWidth="Infinity" onAction="#handleLeaveGroup" style="-fx-background-color: transparent; -fx-padding: 10 15; -fx-cursor: hand; -fx-font-size: 13px;" text="Leave group">
                     <graphic>
                         <FontIcon style="-fx-icon-color: #808080;" iconLiteral="fas-sign-out-alt" />
                     </graphic>
@@ -266,7 +261,7 @@
                             <children>
                                 <ImageView fitHeight="75.0" fitWidth="75.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                        <Image url="@/com/vgu/client/ui/assets/default/anon_sender.png" />
                                     </image>
                                     <clip>
                                         <Circle centerX="37.5" centerY="37.5" radius="37.5" />
@@ -275,11 +270,6 @@
                             </children>
                         </StackPane>
 
-                        <StackPane layoutX="70.0" layoutY="80.0" style="-fx-background-color: -color-bg-default; -fx-background-radius: 50; -fx-padding: 4;">
-                            <children>
-                                <Circle fx:id="profileStatusDot" fill="#2ecc71" radius="10.0" stroke="TRANSPARENT" />
-                            </children>
-                        </StackPane>
                     </children>
                 </AnchorPane>
 
@@ -290,8 +280,7 @@
                     <children>
                         <VBox spacing="2.0">
                             <children>
-                                <Label fx:id="profileDisplayName" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="" />
-                                <Label fx:id="profileUsername" style="-fx-font-size: 14px;" text="" textFill="#a1a1aa" />
+                                <Label fx:id="profileHandle" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="" />
                             </children>
                         </VBox>
                     </children>

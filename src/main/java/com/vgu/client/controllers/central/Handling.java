@@ -28,7 +28,8 @@ public class Handling {
     @FXML
     public void initialize() {
         if (modalCard != null) {
-            modalCard.addEventFilter(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
+            // Handler (bubbling), not filter: children such as the avatar must get the click first.
+            modalCard.addEventHandler(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
         }
         onModalInitialized();
     }
@@ -46,6 +47,26 @@ public class Handling {
     protected void handleClose() {
         if (onCloseCallback != null) {
             onCloseCallback.run();
+        }
+    }
+
+    /** Asks "are you sure?" in the app's own dialog; {@code onConfirm} runs only if the user agrees. */
+    protected void showConfirm(String title, String detail, Runnable onConfirm) {
+        if (overlayRoot == null || !(overlayRoot.getParent() instanceof Pane parentPane)) return;
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/vgu/client/ui/views/settings/warning.view.fxml"));
+            Parent overlay = loader.load();
+            Warning controller = loader.getController();
+            controller.setupAsConfirm(title, detail, onConfirm);
+            controller.setOnCloseCallback(() -> parentPane.getChildren().remove(overlay));
+
+            AnchorPane.setTopAnchor(overlay, 0.0);
+            AnchorPane.setBottomAnchor(overlay, 0.0);
+            AnchorPane.setLeftAnchor(overlay, 0.0);
+            AnchorPane.setRightAnchor(overlay, 0.0);
+            parentPane.getChildren().add(overlay);
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

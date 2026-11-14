@@ -54,11 +54,11 @@
 
                 <HBox alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
                     <children>
-                        <StackPane style="-fx-cursor: hand;">
+                        <StackPane onMouseClicked="#handleChooseAvatar" style="-fx-cursor: hand;">
                             <children>
                                 <ImageView fx:id="userAvatarImg" fitHeight="64.0" fitWidth="64.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                        <Image url="@/com/vgu/client/ui/assets/default/anon_user.png" />
                                     </image>
                                     <clip>
                                         <Circle centerX="32.0" centerY="32.0" radius="32.0" />
@@ -68,8 +68,6 @@
                         </StackPane>
                         <VBox alignment="CENTER_LEFT" spacing="6.0" HBox.hgrow="ALWAYS">
                             <children>
-                                <Label style="-fx-font-size: 11px; -fx-font-weight: bold; -fx-text-fill: #475569;" text="DISPLAY NAME:" />
-                                <TextField fx:id="displayNameField" promptText="Enter display name..." HBox.hgrow="ALWAYS" />
                                 <VBox alignment="CENTER_LEFT" spacing="1.5">
                                     <children>
                                         <HBox alignment="CENTER_LEFT" spacing="6.0">

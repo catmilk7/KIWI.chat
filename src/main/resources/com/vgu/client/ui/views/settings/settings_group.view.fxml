@@ -57,7 +57,7 @@
                             <children>
                                 <ImageView fx:id="groupAvatarImg" fitHeight="64.0" fitWidth="64.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                        <Image url="@/com/vgu/client/ui/assets/default/group.png" />
                                     </image>
                                     <clip>
                                         <Circle centerX="32.0" centerY="32.0" radius="32.0" />
@@ -95,7 +95,7 @@
                                             <children>
                                                 <ImageView fitHeight="36.0" fitWidth="36.0" pickOnBounds="true" preserveRatio="true">
                                                     <image>
-                                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                                        <Image url="@/com/vgu/client/ui/assets/default/anon_sender.png" />
                                                     </image>
                                                     <clip>
                                                         <Circle centerX="18.0" centerY="18.0" radius="18.0" />
@@ -124,10 +124,13 @@
                             <children>
                                 <VBox spacing="2.0" HBox.hgrow="ALWAYS">
                                     <children>
-                                        <Label fx:id="inviteCodeLabel" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-font-family: monospace; -fx-text-fill: -color-accent-emphasis;" text="X8K92A" />
-                                        <Label fx:id="countdownLabel" style="-fx-font-size: 11px; -fx-text-fill: #64748b;" text="Expires in 00:00:00" />
+                                        <Label fx:id="inviteCodeLabel" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-font-family: monospace; -fx-text-fill: -color-accent-emphasis;" text="-" />
+                                        <Label fx:id="countdownLabel" style="-fx-font-size: 11px; -fx-text-fill: #64748b;" text="" />
                                     </children>
                                 </VBox>
+                                <Button mnemonicParsing="false" onAction="#handleCopyCode"
+                                        style="-fx-background-color: #f1f5f9; -fx-border-color: #cbd5e1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 6 12; -fx-cursor: hand; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #475569;"
+                                        text="Copy" />
                                 <Button fx:id="regenCodeBtn" mnemonicParsing="false" onAction="#handleRegenerateCode"
                                         style="-fx-background-color: #f1f5f9; -fx-border-color: #cbd5e1; -fx-border-radius: 6; -fx-background-radius: 6; -fx-padding: 6 12; -fx-cursor: hand; -fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #475569;"
                                         text="Regenerate">
