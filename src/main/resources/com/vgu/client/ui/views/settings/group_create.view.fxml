@@ -50,13 +50,20 @@
 
                 <Separator />
 
-                <HBox alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
+                <HBox alignment="CENTER_LEFT" spacing="8.0">
+                    <children>
+                        <Button fx:id="createModeBtn" mnemonicParsing="false" onAction="#showCreateMode" text="Create a group" />
+                        <Button fx:id="joinModeBtn" mnemonicParsing="false" onAction="#showJoinMode" text="Join with a code" />
+                    </children>
+                </HBox>
+
+                <HBox fx:id="createSection" alignment="CENTER_LEFT" spacing="16.0" style="-fx-background-color: #f8fafc; -fx-padding: 12; -fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8;">
                     <children>
                         <StackPane style="-fx-cursor: hand;">
                             <children>
                                 <ImageView fx:id="groupAvatarImg" fitHeight="56.0" fitWidth="56.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
-                                        <Image url="https://placehold.co/128x128/EEE/31343C?font=oswald&amp;text=placeholder" />
+                                        <Image url="@/com/vgu/client/ui/assets/default/group.png" />
                                     </image>
                                     <clip>
                                         <Circle centerX="28.0" centerY="28.0" radius="28.0" />
@@ -73,10 +80,10 @@
                     </children>
                 </HBox>
 
-                <VBox spacing="6.0">
+                <VBox fx:id="joinSection" spacing="6.0">
                     <children>
-                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="OR JOIN VIA INVITE CODE" />
-                        <TextField fx:id="inviteCodeInputField" promptText="Enter invite code (e.g. X8K92A)..." />
+                        <Label style="-fx-font-size: 12px; -fx-font-weight: bold; -fx-text-fill: #64748b;" text="INVITE CODE" />
+                        <TextField fx:id="inviteCodeInputField" promptText="XXXX-XXXX-XXXX" />
                     </children>
                 </VBox>
 
@@ -90,7 +97,7 @@
                                 text="Cancel" />
                         <Button fx:id="createBtn" mnemonicParsing="false" onAction="#handleCreateGroup"
                                 style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 8 20; -fx-cursor: hand; -fx-font-weight: bold;"
-                                text="Submit">
+                                text="Create">
                         </Button>
                     </children>
                 </HBox>

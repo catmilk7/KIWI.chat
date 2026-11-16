@@ -10,12 +10,11 @@
 <?import javafx.scene.layout.VBox?>
 <?import org.kordamp.ikonli.javafx.FontIcon?>
 
-<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-image: url('/com/vgu/client/ui/assets/background/kiwi_main.png');" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.controllers.auth.Secure">
+<AnchorPane maxHeight="-Infinity" maxWidth="-Infinity" minHeight="800.0" minWidth="1200.0" prefHeight="800.0" prefWidth="1200.0" style="-fx-background-image: url('/com/vgu/client/ui/assets/background/kiwi_main.png');" stylesheets="@/com/vgu/client/ui/assets/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.vgu.client.controllers.auth.AuthController">
     <children>
         <VBox alignment="CENTER" spacing="15.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
             <children>
 
-                <TextField fx:id="displayNameField" maxWidth="250.0" promptText="Display name" style="-fx-font-size: 16px;" />
                 <TextField fx:id="usernameField" maxWidth="250.0" promptText="Username" style="-fx-font-size: 16px;" />
                 <PasswordField fx:id="passwordField" maxWidth="250.0" promptText="Password" style="-fx-font-size: 16px;" />
                 <PasswordField fx:id="confirmField" maxWidth="250.0" promptText="Repeat your password" style="-fx-font-size: 16px;" />
