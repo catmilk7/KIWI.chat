@@ -8,8 +8,20 @@ import javafx.scene.*;
 import javafx.scene.text.*;
 import javafx.scene.image.*;
 import javafx.stage.*;
+import java.net.*;
 
 public class Main extends Application {
+    private static final int SINGLE_INSTANCE_PORT = 47821;
+    private static ServerSocket serverSocket;
+
+    private static boolean lockInstance() {
+        try {
+            serverSocket = new ServerSocket(SINGLE_INSTANCE_PORT, 1, InetAddress.getLocalHost());
+            return true; // Successfully bound -> We are the first instance
+        } catch (Exception e) {
+            return false; // Port is already bound -> Another instance is running
+        }
+    }
 
     @Override
     public void init(){
@@ -55,7 +67,12 @@ public class Main extends Application {
         }
     }
 
-    public static void main(String[] args){
+    public static void main(String[] args) {
+        if (!lockInstance()) {
+            System.err.println("Another instance of KIWI.chat is already running. Exiting...");
+            System.exit(0);
+        }
+
         launch(args);
     }
 }

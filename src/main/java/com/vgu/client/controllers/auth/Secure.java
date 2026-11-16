@@ -1,4 +1,4 @@
-package com.vgu.client.ui.controllers.auth;
+package com.vgu.client.controllers.auth;
 
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -8,7 +8,6 @@ import javafx.scene.Scene;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Label;
-import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.event.ActionEvent;
 import javafx.animation.FadeTransition;
@@ -19,8 +18,10 @@ import javafx.util.Duration;
 import java.io.IOException;
 import java.util.Random;
 
-public class secure {
+public class Secure {
 
+    @FXML
+    private TextField displayNameField;
     @FXML
     private TextField usernameField;
     @FXML
@@ -98,6 +99,11 @@ public class secure {
         switchScene(event, "/com/vgu/client/ui/views/auth/login.view.fxml");
     }
 
+    @FXML
+    private void switchChat(ActionEvent event) {
+        switchScene(event, "/com/vgu/client/ui/views/chat/chat.view.fxml");
+    }
+
     private void switchScene(ActionEvent event, String fxmlFile) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlFile));
@@ -149,17 +155,22 @@ public class secure {
         } else {
             errorMessage.setVisible(false);
             System.out.println("Logged in as: " + username);
+            switchChat(event);
         }
     }
 
     @FXML
     private void handleRegister(ActionEvent event) {
+        String displayName = displayNameField.getText();
         String username = usernameField.getText();
         String password = passwordField.getText();
         String confirmPassword = confirmField.getText();
 
-        if (username == null || username.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()){
+        if (displayName == null || displayName.isBlank() || username == null || username.isBlank() || password == null || password.isBlank() || confirmPassword == null || confirmPassword.isBlank()){
             errorMessage.setText("Please fill in all required fields.");
+            errorMessage.setVisible(true);
+        } else if (!checkUsername(username)){
+            errorMessage.setText("Username contains illegal characters.");
             errorMessage.setVisible(true);
         } else if (!password.equals(confirmPassword)) {
             errorMessage.setText("Passwords do not match. Please try again.");
@@ -171,5 +182,8 @@ public class secure {
         }
     }
 
+    private boolean checkUsername(String username) {
+        return username.matches("[a-zA-Z0-9_]+");
+    }
     // TO DO:
 }
