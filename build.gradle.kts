@@ -28,6 +28,8 @@ dependencies {
     implementation("org.kordamp.ikonli:ikonli-javafx:12.4.0")
     implementation("org.kordamp.ikonli:ikonli-fontawesome5-pack:12.4.0")
     implementation("io.github.mkpaz:atlantafx-base:2.1.0")
+    implementation("io.github.willena:sqlite-jdbc:3.51.3.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
 }
 
