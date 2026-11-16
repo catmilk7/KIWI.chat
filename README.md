@@ -5,9 +5,10 @@ the "OOP with Java" course at the Vietnamese-German University. The client does 
 the cryptography; the [KIWI.Server](https://github.com/CallMeQan/KIWI.Server) only relays
 and stores ciphertext and public keys. This is a learning project, not a production app.
 
-> **Status: early alpha.** The screens (login, register, chat, settings) and the crypto layer
-> with the keystore are done. Networking, real chats, groups, the local database and file
-> sharing are still to do.
+> **Status: alpha.** Screens, the crypto layer with the keystore, the server client
+> (REST and realtime), authentication, direct and group messaging logic, file sharing and
+> the encrypted-at-rest local SQLite database are implemented and tested. The screens are not
+> yet fully wired to the real services.
 
 ## Requirements
 
@@ -31,20 +32,20 @@ On Windows use `gradlew.bat`. On Linux or macOS, if you get "permission denied",
 src/main/java/com/vgu/client/
   Main.java                    JavaFX entry point (loads fonts, theme, login screen)
   models/
-    crypto/                    encryption, signatures, identity keys (done)
-    storage/                   password-protected key storage (done); local database (placeholder)
-    identity/, messaging/      User, Profile, Contact, Conversation, Message ...
-    network/, security/        server client, key bundles, sender keys (placeholders)
+    crypto/                    encryption, signatures, identity keys
+    storage/                   PKCS#12 keystore; SQLite local database and DAOs
+    network/                   REST client (ServerApi), realtime client, file service, DTOs
+    messaging/                 MessagingService, GroupService, MessageCrypto, message and conversation types
   controllers/
-    auth/                      login and register screen logic
+    auth/                      AuthService, Session, login and register screen logic
     central/                   chat, group and user settings screens
-    utils/                     helpers (JWT parsing)
-  enums/                       ConversationType, MemberRole, MessageType, ...
-  database_dummy/              temporary fake data for the UI
-src/main/resources/com/vgu/client/ui/
-  views/                       FXML screens (auth, chat, settings)
-  assets/                      CSS, fonts, icons, images
-src/test/java/                 JUnit 5 tests
+    utils/                     scene navigation, quote rotator
+  enums/                       ConversationType, MessageType, DeliveryStatus
+src/main/resources/com/vgu/client/
+  db/schema.sql                local database schema
+  ui/views/                    FXML screens (auth, chat, settings)
+  ui/assets/                   CSS, fonts, icons, images
+src/test/java/                 JUnit 5 tests (includes a fake KIWI server)
 ```
 
 ## Cryptography
@@ -72,18 +73,26 @@ The rest of the app depends on the interfaces (`CryptoService`, `SignatureServic
 
 ## Tests
 
-`CryptoAndKeyStoreTest` checks, among other things: encrypt/decrypt round trips, a new
-nonce every time, rejection of tampered data, wrong-key unwrapping, signature
-verification, key text fitting the server's length limit, and keystore save/load with a
-wrong password.
+```bash
+./gradlew test
+```
+
+| Test class | Covers |
+|---|---|
+| `CryptoAndKeyStoreTest` | encrypt/decrypt, nonce freshness, tamper rejection, wrong-key unwrap, signatures, key text length, keystore save/load and wrong password |
+| `ChatDatabaseTest` | local database and DAOs |
+| `AuthServiceTest` | register, login, logout against a fake server |
+| `MessagingTest` | direct and group messaging (slow: generates many RSA-3072 keys) |
+| `FilesAndGroupsTest` | file sharing and group management |
+
+`FakeKiwiServer` is a small in-process server that stands in for KIWI.Server in tests.
 
 ## Roadmap
 
-1. Server client and authentication (register, login, logout)
-2. Direct chats: fetch a contact's keys, encrypt, sign, send and receive
-3. Group chats: sender keys and key rotation when members change
-4. Encrypted local database, contacts and file sharing
-5. Chat user interface
+1. Wire the screens to the real services (login, chat list, sending and receiving)
+2. Group key rotation when members change
+3. Speed up `MessagingTest` by sharing generated keys
+4. Report and admin features, if kept in the project scope
 
 ## Related
 
