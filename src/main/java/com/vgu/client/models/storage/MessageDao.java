@@ -15,12 +15,10 @@ import java.util.UUID;
 /** All SQL for chat messages: the outbox (send) side and the inbox (receive) side. */
 public final class MessageDao extends BaseDao {
 
-    private static final String SELECT = """
-            SELECT m.local_id, m.server_msg_id, m.client_msg_id, m.conversation_id, m.sender_id,
-                   ct.username, m.msg_type, m.plaintext_content, m.delivery_status, m.created_at
-            FROM messages m
-            LEFT JOIN contacts ct ON ct.user_id = m.sender_id
-            """;
+    private static final String SELECT = "SELECT m.local_id, m.server_msg_id, m.client_msg_id, m.conversation_id, m.sender_id, "
+            + "       ct.username, m.msg_type, m.plaintext_content, m.delivery_status, m.created_at "
+            + "FROM messages m "
+            + "LEFT JOIN contacts ct ON ct.user_id = m.sender_id ";
 
     /** Sent and received messages by server id; unsent ones (no server id yet) last, by when they were written. */
     static final String ARRIVAL_ORDER = "(m.server_msg_id IS NULL), m.server_msg_id, m.local_id";
@@ -62,15 +60,13 @@ public final class MessageDao extends BaseDao {
     public Message insertOutgoingFile(long conversationId, com.vgu.client.models.messaging.FileAttachment file) {
         Message message = insertOutgoing(conversationId, MessageType.FILE_KEY, file.toJson());
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO local_file_attachments (server_file_id, message_id, local_path, file_name, file_size,
-                                                        download_status, created_at)
-                    VALUES (?, ?, '', ?, ?, 'COMPLETED', ?)
-                    """)) {
-                ps.setLong(1, file.fileId());
-                ps.setLong(2, message.localId());
-                ps.setString(3, file.name());
-                ps.setLong(4, file.size());
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO local_file_attachments (server_file_id, message_id, local_path, file_name, file_size, "
+                    + "                                    download_status, created_at) "
+                    + "VALUES (?, ?, '', ?, ?, 'COMPLETED', ?) ")) {
+                ps.setLong(1, file.getFileId());
+                ps.setLong(2, message.getLocalId());
+                ps.setString(3, file.getName());
+                ps.setLong(4, file.getSize());
                 ps.setString(5, now());
                 ps.executeUpdate();
             }
@@ -84,11 +80,9 @@ public final class MessageDao extends BaseDao {
         Instant now = Instant.now();
         return db.write(c -> {
             long localId;
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO messages (client_msg_id, conversation_id, sender_id, msg_type,
-                                          plaintext_content, delivery_status, created_at)
-                    VALUES (?, ?, ?, ?, ?, 'SENDING', ?)
-                    """, java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO messages (client_msg_id, conversation_id, sender_id, msg_type, "
+                    + "                      plaintext_content, delivery_status, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, 'SENDING', ?) ", java.sql.Statement.RETURN_GENERATED_KEYS)) {
                 ps.setString(1, clientMsgId);
                 ps.setLong(2, conversationId);
                 ps.setLong(3, me);
@@ -118,11 +112,9 @@ public final class MessageDao extends BaseDao {
      */
     public void markSent(String clientMsgId, long serverMsgId, Instant serverTime) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    UPDATE messages SET server_msg_id = ?, delivery_status = 'SENT', ciphertext = NULL, iv = NULL,
-                                        created_at = COALESCE(?, created_at)
-                    WHERE client_msg_id = ? AND sender_id = ? AND server_msg_id IS NULL
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE messages SET server_msg_id = ?, delivery_status = 'SENT', ciphertext = NULL, iv = NULL, "
+                    + "                    created_at = COALESCE(?, created_at) "
+                    + "WHERE client_msg_id = ? AND sender_id = ? AND server_msg_id IS NULL ")) {
                 ps.setLong(1, serverMsgId);
                 ps.setString(2, serverTime == null ? null : serverTime.toString());
                 ps.setString(3, clientMsgId);
@@ -135,10 +127,8 @@ public final class MessageDao extends BaseDao {
 
     public void markFailed(String clientMsgId) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    UPDATE messages SET delivery_status = 'FAILED'
-                    WHERE client_msg_id = ? AND sender_id = ? AND server_msg_id IS NULL
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE messages SET delivery_status = 'FAILED' "
+                    + "WHERE client_msg_id = ? AND sender_id = ? AND server_msg_id IS NULL ")) {
                 ps.setString(1, clientMsgId);
                 ps.setLong(2, me);
                 ps.executeUpdate();
@@ -167,11 +157,9 @@ public final class MessageDao extends BaseDao {
         return db.write(c -> {
             boolean isNew;
             int echoed;
-            try (PreparedStatement ps = c.prepareStatement("""
-                    UPDATE messages SET server_msg_id = ?, delivery_status = 'SENT', ciphertext = NULL, iv = NULL,
-                                        created_at = ?
-                    WHERE client_msg_id = ? AND sender_id = ? AND conversation_id = ? AND server_msg_id IS NULL
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE messages SET server_msg_id = ?, delivery_status = 'SENT', ciphertext = NULL, iv = NULL, "
+                    + "                    created_at = ? "
+                    + "WHERE client_msg_id = ? AND sender_id = ? AND conversation_id = ? AND server_msg_id IS NULL ")) {
                 ps.setLong(1, serverMsgId);
                 ps.setString(2, createdAt.toString());
                 ps.setString(3, clientMsgId);
@@ -182,12 +170,10 @@ public final class MessageDao extends BaseDao {
             if (echoed > 0) {
                 isNew = false;
             } else {
-                try (PreparedStatement ps = c.prepareStatement("""
-                        INSERT INTO messages (server_msg_id, client_msg_id, conversation_id, sender_id, msg_type,
-                                              plaintext_content, delivery_status, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, 'SENT', ?)
-                        ON CONFLICT DO NOTHING
-                        """)) {
+                try (PreparedStatement ps = c.prepareStatement("INSERT INTO messages (server_msg_id, client_msg_id, conversation_id, sender_id, msg_type, "
+                        + "                      plaintext_content, delivery_status, created_at) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, 'SENT', ?) "
+                        + "ON CONFLICT DO NOTHING ")) {
                     ps.setLong(1, serverMsgId);
                     ps.setString(2, clientMsgId);
                     ps.setLong(3, conversationId);
@@ -198,13 +184,11 @@ public final class MessageDao extends BaseDao {
                     isNew = ps.executeUpdate() > 0;
                 }
                 if (isNew) {
-                    try (PreparedStatement ps = c.prepareStatement("""
-                            UPDATE conversations
-                            SET last_msg_id = MAX(last_msg_id, ?),
-                                unread_count = unread_count + CASE WHEN ? = ? THEN 0 ELSE 1 END,
-                                updated_at = ?
-                            WHERE conversation_id = ?
-                            """)) {
+                    try (PreparedStatement ps = c.prepareStatement("UPDATE conversations "
+                            + "SET last_msg_id = MAX(last_msg_id, ?), "
+                            + "    unread_count = unread_count + CASE WHEN ? = ? THEN 0 ELSE 1 END, "
+                            + "    updated_at = ? "
+                            + "WHERE conversation_id = ? ")) {
                         ps.setLong(1, serverMsgId);
                         ps.setLong(2, senderId);
                         ps.setLong(3, me);

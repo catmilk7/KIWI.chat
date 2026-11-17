@@ -31,7 +31,7 @@ class CryptoAndKeyStoreTest {
         SecretKey k = crypto.generateAesKey();
         byte[] msg = "hello bob".getBytes(StandardCharsets.UTF_8);
         Sealed s = crypto.encrypt(k, msg, new byte[0]);
-        assertEquals(12, s.iv().length);
+        assertEquals(12, s.getIv().length);
         assertArrayEquals(msg, crypto.decrypt(k, s, new byte[0]));
     }
 
@@ -39,14 +39,14 @@ class CryptoAndKeyStoreTest {
     void nonceIsFreshEveryTime() {
         SecretKey k = crypto.generateAesKey();
         byte[] m = new byte[]{1};
-        assertFalse(Arrays.equals(crypto.encrypt(k, m, null).iv(), crypto.encrypt(k, m, null).iv()));
+        assertFalse(Arrays.equals(crypto.encrypt(k, m, null).getIv(), crypto.encrypt(k, m, null).getIv()));
     }
 
     @Test
     void tamperedCiphertextIsRejected() {
         SecretKey k = crypto.generateAesKey();
         Sealed s = crypto.encrypt(k, "x".getBytes(), null);
-        s.ciphertext()[0] ^= 1;
+        s.getCiphertext()[0] ^= 1;
         assertThrows(CryptoException.class, () -> crypto.decrypt(k, s, null));
     }
 
@@ -60,30 +60,30 @@ class CryptoAndKeyStoreTest {
     @Test
     void wrapUnwrapKey() {
         SecretKey k = crypto.generateAesKey();
-        byte[] wrapped = crypto.wrapKey(alice.encryption().getPublic(), k);
+        byte[] wrapped = crypto.wrapKey(alice.getEncryption().getPublic(), k);
         assertArrayEquals(k.getEncoded(),
-                crypto.unwrapKey(alice.encryption().getPrivate(), wrapped).getEncoded());
+                crypto.unwrapKey(alice.getEncryption().getPrivate(), wrapped).getEncoded());
     }
 
     @Test
     void wrongPrivateKeyCannotUnwrap() {
         KeyPair other = crypto.generateEncryptionKeyPair();
-        byte[] wrapped = crypto.wrapKey(alice.encryption().getPublic(), crypto.generateAesKey());
+        byte[] wrapped = crypto.wrapKey(alice.getEncryption().getPublic(), crypto.generateAesKey());
         assertThrows(CryptoException.class, () -> crypto.unwrapKey(other.getPrivate(), wrapped));
     }
 
     @Test
     void signatureVerifiesAndRejectsTampering() {
         byte[] data = "envelope".getBytes();
-        byte[] sig = sigs.sign(alice.signing().getPrivate(), data);
-        assertTrue(sigs.verify(alice.signing().getPublic(), data, sig));
-        assertFalse(sigs.verify(alice.signing().getPublic(), "other".getBytes(), sig));
+        byte[] sig = sigs.sign(alice.getSigning().getPrivate(), data);
+        assertTrue(sigs.verify(alice.getSigning().getPublic(), data, sig));
+        assertFalse(sigs.verify(alice.getSigning().getPublic(), "other".getBytes(), sig));
     }
 
     @Test
     void publicKeyStringRoundTrip() {
         String s = alice.encryptionPublicKeyBase64();
-        assertEquals(alice.encryption().getPublic(), KeyCodec.decodePublic(s));
+        assertEquals(alice.getEncryption().getPublic(), KeyCodec.decodePublic(s));
         assertTrue(s.length() < 16_384, "must fit the server's key length limit");
     }
 
@@ -95,8 +95,8 @@ class CryptoAndKeyStoreTest {
         alice.saveTo(ks);
 
         IdentityKeyPair loaded = IdentityKeyPair.loadFrom(ks).orElseThrow();
-        assertEquals(alice.encryption().getPrivate(), loaded.encryption().getPrivate());
-        assertEquals(alice.signing().getPublic(), loaded.signing().getPublic());
+        assertEquals(alice.getEncryption().getPrivate(), loaded.getEncryption().getPrivate());
+        assertEquals(alice.getSigning().getPublic(), loaded.getSigning().getPublic());
 
         Pkcs12KeyStore bad = new Pkcs12KeyStore(f, "wrong".toCharArray());
         assertThrows(KeyStoreException.class, bad::verifyPassword);

@@ -69,8 +69,8 @@ class DirectMessagingTest {
 
         List<Message> seen = bob.messages().list(chat);
         assertEquals(1, seen.size());
-        assertEquals("hello bobby, the secret is 42", seen.get(0).content());
-        assertEquals("alice", seen.get(0).senderUsername()); // learned from the sealed message itself
+        assertEquals("hello bobby, the secret is 42", seen.get(0).getContent());
+        assertEquals("alice", seen.get(0).getSenderUsername()); // learned from the sealed message itself
         ConversationItem item = bob.conversations().list("").get(0);
         assertEquals(ConversationType.DIRECT, item.type());
         assertEquals("@alice", item.title());
@@ -80,9 +80,9 @@ class DirectMessagingTest {
 
         List<Message> mine = alice.messages().list(chat);
         assertEquals(2, mine.size()); // our own message is not duplicated by the sync
-        assertEquals("hello bobby, the secret is 42", mine.get(0).content());
-        assertEquals(DeliveryStatus.SENT, mine.get(0).status());
-        assertEquals("got it", mine.get(1).content());
+        assertEquals("hello bobby, the secret is 42", mine.get(0).getContent());
+        assertEquals(DeliveryStatus.SENT, mine.get(0).getStatus());
+        assertEquals("got it", mine.get(1).getContent());
         assertEquals("@bobby", alice.conversations().list("").get(0).title());
         assertEquals(0, server.countMessages("SENDER_KEY")); // a direct chat needs no sender key
     }
@@ -110,6 +110,6 @@ class DirectMessagingTest {
         server.corruptLast("TEXT");
         bob.messaging().syncAll();
 
-        assertEquals(MessagingService.UNREADABLE, bob.messages().list(chat).get(0).content());
+        assertEquals(MessagingService.UNREADABLE, bob.messages().list(chat).get(0).getContent());
     }
 }

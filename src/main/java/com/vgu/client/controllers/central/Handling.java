@@ -29,7 +29,7 @@ public class Handling {
     public void initialize() {
         if (modalCard != null) {
             // Handler (bubbling), not filter: children such as the avatar must get the click first.
-            modalCard.addEventHandler(MouseEvent.MOUSE_CLICKED, MouseEvent::consume);
+            modalCard.addEventHandler(MouseEvent.MOUSE_CLICKED, event -> event.consume());
         }
         onModalInitialized();
     }
@@ -52,7 +52,8 @@ public class Handling {
 
     /** Asks "are you sure?" in the app's own dialog; {@code onConfirm} runs only if the user agrees. */
     protected void showConfirm(String title, String detail, Runnable onConfirm) {
-        if (overlayRoot == null || !(overlayRoot.getParent() instanceof Pane parentPane)) return;
+        if (overlayRoot == null || !(overlayRoot.getParent() instanceof Pane)) return;
+        Pane parentPane = (Pane) overlayRoot.getParent();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/vgu/client/ui/views/settings/warning.view.fxml"));
             Parent overlay = loader.load();
@@ -71,7 +72,8 @@ public class Handling {
     }
 
     protected void showError(String title, String detail) {
-        if (overlayRoot == null || !(overlayRoot.getParent() instanceof Pane parentPane)) return;
+        if (overlayRoot == null || !(overlayRoot.getParent() instanceof Pane)) return;
+        Pane parentPane = (Pane) overlayRoot.getParent();
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/vgu/client/ui/views/settings/warning.view.fxml"));
             Parent warningOverlay = loader.load();

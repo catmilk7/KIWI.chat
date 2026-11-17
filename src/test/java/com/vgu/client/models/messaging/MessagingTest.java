@@ -47,7 +47,7 @@ class MessagingTest {
         alice = account("alice");
         bob = account("bobby");
         group = alice.groups().createGroup("Team");
-        bob.groups().join(alice.groups().mintInvite(group).code());
+        bob.groups().join(alice.groups().mintInvite(group).getCode());
     }
 
     @AfterEach
@@ -72,8 +72,8 @@ class MessagingTest {
 
         List<Message> seen = bob.messages().list(group);
         assertEquals(1, seen.size());
-        assertEquals("hello team, the secret is 42", seen.get(0).content());
-        assertEquals("alice", seen.get(0).senderUsername()); // learned from the signed key package
+        assertEquals("hello team, the secret is 42", seen.get(0).getContent());
+        assertEquals("alice", seen.get(0).getSenderUsername()); // learned from the signed key package
         assertEquals("Team", bob.conversations().list("").get(0).title()); // so was the group name
         assertEquals(1, bob.conversations().list("").get(0).unreadCount());
     }
@@ -81,8 +81,8 @@ class MessagingTest {
     @Test
     void theOtherAccountCanAnswerAndTheSenderMarksItsOwnMessageSent() throws Exception {
         Message sent = say(alice, "ping");
-        assertEquals(DeliveryStatus.SENT, alice.messages().list(group).get(0).status());
-        assertNotNull(alice.messages().list(group).get(0).serverMsgId());
+        assertEquals(DeliveryStatus.SENT, alice.messages().list(group).get(0).getStatus());
+        assertNotNull(alice.messages().list(group).get(0).getServerMsgId());
 
         bob.messaging().syncAll();
         say(bob, "pong");
@@ -90,9 +90,9 @@ class MessagingTest {
 
         List<Message> inAlicesDb = alice.messages().list(group);
         assertEquals(2, inAlicesDb.size());
-        assertEquals("pong", inAlicesDb.get(1).content());
-        assertEquals("bobby", inAlicesDb.get(1).senderUsername());
-        assertEquals(sent.clientMsgId(), inAlicesDb.get(0).clientMsgId()); // own message not duplicated by the echo
+        assertEquals("pong", inAlicesDb.get(1).getContent());
+        assertEquals("bobby", inAlicesDb.get(1).getSenderUsername());
+        assertEquals(sent.getClientMsgId(), inAlicesDb.get(0).getClientMsgId()); // own message not duplicated by the echo
     }
 
     @Test
@@ -104,13 +104,13 @@ class MessagingTest {
 
         // a new member bumps the epoch: the next message needs a fresh key, sent to everyone
         Session carol = account("carol");
-        carol.groups().join(alice.groups().mintInvite(group).code());
+        carol.groups().join(alice.groups().mintInvite(group).getCode());
         say(alice, "four");
         assertEquals(1 + 2, server.countMessages("SENDER_KEY"));
 
         carol.messaging().syncAll();
         // the server hides messages from before she joined, and she holds only the new key
-        assertEquals(List.of("four"), carol.messages().list(group).stream().map(Message::content).toList());
+        assertEquals(List.of("four"), carol.messages().list(group).stream().map(m -> m.getContent()).toList());
         carol.close();
     }
 
@@ -120,7 +120,7 @@ class MessagingTest {
         server.corruptLast("TEXT");
         bob.messaging().syncAll();
 
-        assertEquals(MessagingService.UNREADABLE, bob.messages().list(group).get(0).content());
+        assertEquals(MessagingService.UNREADABLE, bob.messages().list(group).get(0).getContent());
     }
 
     @Test
@@ -130,8 +130,8 @@ class MessagingTest {
         bob.messaging().syncAll();
 
         Message shown = bob.messages().list(group).get(0);
-        assertEquals(MessagingService.UNREADABLE, shown.content());
-        assertNotNull(shown.senderUsername()); // shown as "@user#id", never "Unknown"
+        assertEquals(MessagingService.UNREADABLE, shown.getContent());
+        assertNotNull(shown.getSenderUsername()); // shown as "@user#id", never "Unknown"
     }
 
     @Test
@@ -162,7 +162,7 @@ class MessagingTest {
 
     @Test
     void aKickedMemberLosesTheGroupWhenTheyNextSyncAndTheInviteStopsWorking() throws Exception {
-        String code = alice.groups().mintInvite(group).code();
+        String code = alice.groups().mintInvite(group).getCode();
         alice.groups().kick(group, bob.userId());
 
         assertTrue(alice.contacts().listMembers(group, alice.userId()).isEmpty());
@@ -193,7 +193,7 @@ class MessagingTest {
         bob.messaging().syncAll();
         bob.messaging().syncAll();
 
-        assertEquals(List.of("first", "second"), bob.messages().list(group).stream().map(Message::content).toList());
+        assertEquals(List.of("first", "second"), bob.messages().list(group).stream().map(m -> m.getContent()).toList());
     }
 
     @Test
@@ -202,7 +202,7 @@ class MessagingTest {
         server.close();
         ApiException e = assertThrows(ApiException.class, () -> alice.messaging().transmit(queued));
         assertTrue(e.isNetworkError());
-        assertEquals(DeliveryStatus.SENDING, alice.messages().list(group).get(0).status());
+        assertEquals(DeliveryStatus.SENDING, alice.messages().list(group).get(0).getStatus());
         assertEquals(1, alice.messages().pendingOutgoing().size());
     }
 
@@ -216,8 +216,8 @@ class MessagingTest {
         alice.messaging().syncAll();
 
         assertEquals("Team", bob.conversations().list("").get(0).title());
-        assertEquals(List.of("alice"), bob.contacts().listMembers(group, bob.userId()).stream().map(m -> m.username()).toList());
-        assertEquals(List.of("bobby"), alice.contacts().listMembers(group, alice.userId()).stream().map(m -> m.username()).toList());
+        assertEquals(List.of("alice"), bob.contacts().listMembers(group, bob.userId()).stream().map(m -> m.getUsername()).toList());
+        assertEquals(List.of("bobby"), alice.contacts().listMembers(group, alice.userId()).stream().map(m -> m.getUsername()).toList());
     }
 
     @Test
@@ -226,10 +226,10 @@ class MessagingTest {
         // An account literally called "user1" then collided with it (usernames are unique) and the join failed.
         Session user1 = account("user1");
         try {
-            long joined = user1.groups().join(alice.groups().mintInvite(group).code());
+            long joined = user1.groups().join(alice.groups().mintInvite(group).getCode());
             assertEquals(group, joined);
             assertEquals(1, user1.conversations().list("").size());
-            var others = user1.contacts().listMembers(group, user1.userId()).stream().map(m -> m.username()).toList();
+            var others = user1.contacts().listMembers(group, user1.userId()).stream().map(m -> m.getUsername()).toList();
             assertEquals(2, others.size()); // alice and bobby, whose names this account does not know yet
             assertTrue(others.contains("user#1"), others.toString()); // alice, under a placeholder that cannot collide
             assertFalse(others.contains("user1"));
@@ -258,7 +258,7 @@ class MessagingTest {
         try {
             for (int i = 0; i < 25; i++) {
                 long id = alice.groups().createGroup("extra " + i);
-                String code = alice.groups().mintInvite(id).code();
+                String code = alice.groups().mintInvite(id).getCode();
                 long joined = bob.groups().join(code);
                 assertEquals(id, joined);
                 assertTrue(bob.conversations().exists(id), "joined group " + id + " vanished");
@@ -274,8 +274,8 @@ class MessagingTest {
     @Test
     void sessionSendIsAsynchronousAndEventuallySent() throws Exception {
         Message shown = alice.send(group, new TextContent("async hello"));
-        assertEquals(DeliveryStatus.SENDING, shown.status()); // visible immediately
-        awaitTrue(() -> alice.messages().list(group).get(0).status() == DeliveryStatus.SENT);
+        assertEquals(DeliveryStatus.SENDING, shown.getStatus()); // visible immediately
+        awaitTrue(() -> alice.messages().list(group).get(0).getStatus() == DeliveryStatus.SENT);
     }
 
     @Test
@@ -287,7 +287,7 @@ class MessagingTest {
         assertEquals(List.of("hello there", "\uD83D\uDCCE Attachment"), all.stream().map(MessageContent::preview).toList());
         assertEquals(List.of(MessageType.TEXT, MessageType.FILE_KEY), all.stream().map(MessageContent::type).toList());
         assertTrue(text.attachment().isEmpty());
-        assertEquals("cv.pdf", file.attachment().orElseThrow().name());
+        assertEquals("cv.pdf", file.attachment().orElseThrow().getName());
 
         // what is stored comes back as the same kind
         assertEquals(file.toStorage(), MessageContent.parse(MessageType.FILE_KEY, file.toStorage()).toStorage());
@@ -322,17 +322,17 @@ class MessagingTest {
         assertEquals("No messages yet", new GroupConversationItem().lastPreview());
         assertEquals("", new DirectConversationItem().title());
         assertEquals(0L, new GroupConversationItem().id());
-        assertEquals(DeliveryStatus.SENDING, new Message().status());
-        assertEquals(0L, new FileAttachment().fileId());
-        assertEquals("", new com.vgu.client.models.storage.ContactDao.Member().username());
+        assertEquals(DeliveryStatus.SENDING, new Message().getStatus());
+        assertEquals(0L, new FileAttachment().getFileId());
+        assertEquals("", new com.vgu.client.models.storage.ContactDao.Member().getUsername());
 
         // ... and overloaded constructors build the same thing from more or fewer parts
         FileAttachment file = new FileAttachment(7, "a2V5", "cv.pdf", 10);
         assertEquals(file, new AttachmentContent(7, "a2V5", "cv.pdf", 10).attachment().orElseThrow());
         assertEquals("Team", new GroupConversationItem(5, "Team").title());
         Message fresh = new Message(1, "client-1", 9, 2, new TextContent("hi"));
-        assertEquals("hi", fresh.content());
-        assertNull(fresh.serverMsgId());
+        assertEquals("hi", fresh.getContent());
+        assertNull(fresh.getServerMsgId());
         assertEquals("", new TextContent(null).toStorage()); // null is turned into an empty text
         assertEquals(new ApiClient().getClass(), ApiClient.class);
         assertNotNull(new ServerApi().client());
@@ -361,9 +361,9 @@ class MessagingTest {
         client.dispatch("not json");
 
         assertEquals(1, got.size());
-        assertEquals("TEXT", got.get(0).type());
-        assertEquals(3L, got.get(0).epoch());
-        assertNull(got.get(0).recipientId());
+        assertEquals("TEXT", got.get(0).getType());
+        assertEquals(3L, got.get(0).getEpoch());
+        assertNull(got.get(0).getRecipientId());
         assertEquals(List.of("changed", "removed:13"), events);
         client.close();
     }

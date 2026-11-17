@@ -10,7 +10,9 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.HexFormat;
+import java.util.List;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -135,8 +137,13 @@ public final class ChatDatabase implements AutoCloseable {
             }
             String script = new String(in.readAllBytes(), StandardCharsets.UTF_8)
                     .replaceAll("(?m)--.*$", ""); // strip comments
-            return java.util.Arrays.stream(script.split(";"))
-                    .map(String::trim).filter(s -> !s.isEmpty()).toArray(String[]::new);
+            List<String> statements = new ArrayList<>();
+            for (String part : script.split(";")) {
+                if (!part.trim().isEmpty()) {
+                    statements.add(part.trim());
+                }
+            }
+            return statements.toArray(new String[0]);
         } catch (IOException e) {
             throw new DatabaseException("Could not read schema.sql", e);
         }

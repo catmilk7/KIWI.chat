@@ -60,21 +60,21 @@ public final class GroupService {
 
         Dto.Conversation created = api.createGroup(encryptedMeta);
 
-        conversations.upsert(created.conversationId(), ConversationType.GROUP, name, null, null, created.epoch());
+        conversations.upsert(created.getConversationId(), ConversationType.GROUP, name, null, null, created.getEpoch());
         contacts.upsert(me, myUsername, null, null);
-        for (long memberId : created.memberIds()) {
+        for (long memberId : created.getMemberIds()) {
             contacts.ensure(memberId);
-            conversations.addMember(created.conversationId(), memberId, memberId == me ? "OWNER" : "MEMBER");
+            conversations.addMember(created.getConversationId(), memberId, memberId == me ? "OWNER" : "MEMBER");
         }
-        groupKeys.save(created.conversationId(), me, created.epoch(), Base64.getEncoder().encodeToString(key.getEncoded()));
-        return created.conversationId();
+        groupKeys.save(created.getConversationId(), me, created.getEpoch(), Base64.getEncoder().encodeToString(key.getEncoded()));
+        return created.getConversationId();
     }
 
     /** Owner only. Replaces the previous active code; the raw code is only ever returned here. */
     public Dto.Invite mintInvite(long conversationId) throws ApiException {
         Dto.Invite invite = api.mintInvite(conversationId, DEFAULT_INVITE_MINUTES);
         // The server returns the raw code only this once, so keep it (with its expiry) in the local database.
-        conversations.saveInvite(conversationId, invite.code(), java.time.Instant.parse(invite.expiresAt()));
+        conversations.saveInvite(conversationId, invite.getCode(), java.time.Instant.parse(invite.getExpiresAt()));
         return invite;
     }
 
@@ -98,7 +98,7 @@ public final class GroupService {
             throw e;
         }
         saveRemote(joined);
-        return joined.conversationId();
+        return joined.getConversationId();
     }
 
     /** Stores a conversation (and its member ids) as the server describes it. */
@@ -116,13 +116,28 @@ public final class GroupService {
         java.util.Set<Long> ids = new java.util.HashSet<>();
         for (Dto.Conversation conversation : all) {
             saveRemote(conversation);
-            ids.add(conversation.conversationId());
+            ids.add(conversation.getConversationId());
         }
         return new Refresh(conversations.deleteAllExcept(ids) > 0, all);
     }
 
     /** What a refresh found: whether some conversation was removed, and the server's current list. */
-    public record Refresh(boolean removedAny, Dto.Conversation[] conversations) {
+    public static final class Refresh {
+        private final boolean removedAny;
+        private final Dto.Conversation[] conversations;
+
+        public Refresh(boolean removedAny, Dto.Conversation[] conversations) {
+            this.removedAny = removedAny;
+            this.conversations = conversations;
+        }
+
+        public boolean isRemovedAny() {
+            return removedAny;
+        }
+
+        public Dto.Conversation[] getConversations() {
+            return conversations;
+        }
     }
 
     /** A member leaves. An owner cannot leave while others remain (the server refuses); see {@link #delete}. */
@@ -150,22 +165,22 @@ public final class GroupService {
      * so those show as "Group #id" and "@user#id" until the key and username arrive.
      */
     private void saveRemote(Dto.Conversation c) {
-        boolean direct = "DIRECT".equals(c.type());
+        boolean direct = "DIRECT".equals(c.getType());
         Long low = null;
         Long high = null;
-        if (direct && c.memberIds().size() == 2) {
-            low = Math.min(c.memberIds().get(0), c.memberIds().get(1));
-            high = Math.max(c.memberIds().get(0), c.memberIds().get(1));
+        if (direct && c.getMemberIds().size() == 2) {
+            low = Math.min(c.getMemberIds().get(0), c.getMemberIds().get(1));
+            high = Math.max(c.getMemberIds().get(0), c.getMemberIds().get(1));
         }
-        conversations.upsert(c.conversationId(), direct ? ConversationType.DIRECT : ConversationType.GROUP,
-                null, low, high, c.epoch());
+        conversations.upsert(c.getConversationId(), direct ? ConversationType.DIRECT : ConversationType.GROUP,
+                null, low, high, c.getEpoch());
         contacts.upsert(me, myUsername, null, null);
-        for (long memberId : c.memberIds()) {
+        for (long memberId : c.getMemberIds()) {
             contacts.ensure(memberId);
-            String role = memberId == me ? (c.myRole() == null ? "MEMBER" : c.myRole()) : "MEMBER";
-            conversations.addMember(c.conversationId(), memberId, role);
+            String role = memberId == me ? (c.getMyRole() == null ? "MEMBER" : c.getMyRole()) : "MEMBER";
+            conversations.addMember(c.getConversationId(), memberId, role);
         }
-        conversations.retainMembers(c.conversationId(), c.memberIds()); // drop whoever left or was kicked
+        conversations.retainMembers(c.getConversationId(), c.getMemberIds()); // drop whoever left or was kicked
     }
 
     public static final String INVALID_CODE_MESSAGE =

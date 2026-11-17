@@ -33,13 +33,13 @@ public class Main extends Application {
 
         Application.setUserAgentStylesheet(new PrimerLight().getUserAgentStylesheet());
 
-        Parent root = FXMLLoader.load(Objects.requireNonNull(getClass().getResource("/com/vgu/client/ui/views/auth/login.view.fxml")));
+        Parent root = FXMLLoader.load(getClass().getResource("/com/vgu/client/ui/views/auth/login.view.fxml"));
         Scene scene = new Scene(root, 1200, 800);
 
         primaryStage.getIcons().addAll(
-                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-32.png"))),
-                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-64.png"))),
-                new Image(Objects.requireNonNull(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-128.png")))
+                new Image(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-32.png")),
+                new Image(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-64.png")),
+                new Image(getClass().getResourceAsStream("/com/vgu/client/ui/assets/icon/icon-128.png"))
         );
 
         primaryStage.setTitle("KIWI.chat | ALPHA");

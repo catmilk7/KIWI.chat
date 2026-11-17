@@ -47,8 +47,8 @@ public final class RealtimeClient implements AutoCloseable {
     }
 
     public void start() {
-        scheduler.execute(this::connect);
-        scheduler.scheduleAtFixedRate(this::ping, 25, 25, TimeUnit.SECONDS); // the server drops idle sockets after 60 s
+        scheduler.execute(() -> connect());
+        scheduler.scheduleAtFixedRate(() -> ping(), 25, 25, TimeUnit.SECONDS); // the server drops idle sockets after 60 s
     }
 
     private void connect() {
@@ -78,7 +78,7 @@ public final class RealtimeClient implements AutoCloseable {
             return;
         }
         long delay = Math.min(30, 1L << Math.min(attempt++, 5));
-        scheduler.schedule(this::connect, delay, TimeUnit.SECONDS);
+        scheduler.schedule(() -> connect(), delay, TimeUnit.SECONDS);
     }
 
     /** Turns one server envelope into an event for the listener (public so tests can feed it envelopes). */

@@ -22,7 +22,6 @@ import com.vgu.client.models.storage.ConversationDao;
 import com.vgu.client.models.storage.GroupKeyDao;
 import com.vgu.client.models.storage.MessageDao;
 
-import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -81,13 +80,13 @@ public final class Session implements AutoCloseable {
         this.files = new FileService(api, crypto);
         GroupKeyDao groupKeys = new GroupKeyDao(database);
         this.messaging = new MessagingService(api, new MessageCrypto(crypto, signatures, identity), groups, account,
-                conversations, messages, contacts, groupKeys, identity.encryption().getPrivate(), userId, username);
+                conversations, messages, contacts, groupKeys, identity.getEncryption().getPrivate(), userId, username);
         this.eventSink = new ServerEvent.Sink() {
             @Override public void messageArrived(Dto.SyncMessage message) {
                 submit(() -> messaging.handleIncoming(message));
             }
             @Override public void conversationsChanged() {
-                submit(messaging::refreshAndAnnounce);
+                submit(() -> messaging.refreshAndAnnounce());
             }
             @Override public void conversationRemoved(long conversationId) {
                 submit(() -> conversations.delete(conversationId));
@@ -181,7 +180,7 @@ public final class Session implements AutoCloseable {
         if (current != null) {
             current.close();
         }
-        current = Objects.requireNonNull(session);
+        current = session;
         session.activate();
     }
 

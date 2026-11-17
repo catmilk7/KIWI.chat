@@ -1,5 +1,6 @@
 package com.vgu.client.controllers.central;
 
+import com.vgu.client.models.storage.ConversationDao;
 import com.vgu.client.controllers.auth.Session;
 import com.vgu.client.models.storage.ContactDao;
 import com.vgu.client.models.messaging.ConversationItem;
@@ -103,12 +104,12 @@ public class Settings_group extends Handling {
             setCountdownText("Only the group owner can create invite codes.");
             return;
         }
-        var saved = session.conversations().activeInvite(targetGroup.id(), session.serverNow()); // null if none or expired
+        ConversationDao.Invite saved = session.conversations().activeInvite(targetGroup.id(), session.serverNow()); // null if none or expired
         if (saved == null) {
             showNoCode("No active code. Press Regenerate to create one.");
         } else {
-            inviteCodeLabel.setText(GroupService.formatCode(saved.code()));
-            startCountdown(saved.expiresAt());
+            inviteCodeLabel.setText(GroupService.formatCode(saved.getCode()));
+            startCountdown(saved.getExpiresAt());
         }
     }
 
@@ -117,8 +118,8 @@ public class Settings_group extends Handling {
         if (targetGroup == null) return;
         long groupId = targetGroup.id();
         runOnServer(() -> Session.current().groups().mintInvite(groupId), invite -> {
-            inviteCodeLabel.setText(GroupService.formatCode(invite.code()));
-            startCountdown(Instant.parse(invite.expiresAt()));
+            inviteCodeLabel.setText(GroupService.formatCode(invite.getCode()));
+            startCountdown(Instant.parse(invite.getExpiresAt()));
         });
     }
 
@@ -181,8 +182,8 @@ public class Settings_group extends Handling {
         actionBtn.setOnAction(e -> showConfirm("Remove " + user.handle() + "?",
                 "They will be removed from the group and its current invite code stops working.",
                 () -> runOnServer(() -> {
-                    Session.current().groups().kick(targetGroup.id(), user.userId());
-                    return user.userId();
+                    Session.current().groups().kick(targetGroup.id(), user.getUserId());
+                    return user.getUserId();
                 }, done -> memberListContainer.getChildren().remove(row))));
 
         row.getChildren().addAll(avatar, nameLabel, spacer);
@@ -199,7 +200,7 @@ public class Settings_group extends Handling {
         imageView.setPickOnBounds(true);
         imageView.setPreserveRatio(true);
         try {
-            var stream = getClass().getResourceAsStream("/com/vgu/client/ui/assets/default/anon_user.png");
+            java.io.InputStream stream = getClass().getResourceAsStream("/com/vgu/client/ui/assets/default/anon_user.png");
             if (stream != null) imageView.setImage(new Image(stream));
         } catch (Exception ignored) {}
         imageView.setClip(new Circle(size / 2.0, size / 2.0, size / 2.0));
@@ -265,10 +266,10 @@ public class Settings_group extends Handling {
     @FXML
     private void handleCopyCode() {
         if (targetGroup == null) return;
-        var invite = Session.current().conversations().activeInvite(targetGroup.id(), Session.current().serverNow());
+        ConversationDao.Invite invite = Session.current().conversations().activeInvite(targetGroup.id(), Session.current().serverNow());
         if (invite == null) return;
         ClipboardContent content = new ClipboardContent();
-        content.putString(GroupService.formatCode(invite.code()));
+        content.putString(GroupService.formatCode(invite.getCode()));
         Clipboard.getSystemClipboard().setContent(content);
         setCountdownText("Code copied to the clipboard.");
     }

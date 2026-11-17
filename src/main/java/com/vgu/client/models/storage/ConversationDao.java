@@ -32,13 +32,11 @@ public final class ConversationDao extends BaseDao {
     public void upsert(long id, ConversationType type, String title, Long directUserLow, Long directUserHigh,
                        long epoch) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO conversations (conversation_id, type, title, direct_user_low, direct_user_high, epoch, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(conversation_id) DO UPDATE SET
-                        title = COALESCE(excluded.title, title),
-                        epoch = MAX(epoch, excluded.epoch)
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO conversations (conversation_id, type, title, direct_user_low, direct_user_high, epoch, updated_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?, ?) "
+                    + "ON CONFLICT(conversation_id) DO UPDATE SET "
+                    + "    title = COALESCE(excluded.title, title), "
+                    + "    epoch = MAX(epoch, excluded.epoch) ")) {
                 ps.setLong(1, id);
                 ps.setString(2, type.name());
                 ps.setString(3, title);
@@ -53,7 +51,22 @@ public final class ConversationDao extends BaseDao {
     }
 
     /** An invite code that has not expired yet. */
-    public record Invite(String code, Instant expiresAt) {
+    public static final class Invite {
+        private final String code;
+        private final Instant expiresAt;
+
+        public Invite(String code, Instant expiresAt) {
+            this.code = code;
+            this.expiresAt = expiresAt;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public Instant getExpiresAt() {
+            return expiresAt;
+        }
     }
 
     public void saveInvite(long conversationId, String code, Instant expiresAt) {
@@ -103,7 +116,7 @@ public final class ConversationDao extends BaseDao {
                 }
             }
         });
-        if (stored != null && !stored.expiresAt().isAfter(now)) {
+        if (stored != null && !stored.getExpiresAt().isAfter(now)) {
             clearInvite(conversationId);
             return null;
         }
@@ -199,14 +212,12 @@ public final class ConversationDao extends BaseDao {
 
     /** Removes contacts nothing refers to any more: not a member anywhere, no message, not a direct-chat peer, not us. */
     private void pruneOrphanContacts(java.sql.Connection conn) throws java.sql.SQLException {
-        try (PreparedStatement ps = conn.prepareStatement("""
-                DELETE FROM contacts
-                WHERE user_id <> ?
-                  AND user_id NOT IN (SELECT user_id FROM conversation_members)
-                  AND user_id NOT IN (SELECT sender_id FROM messages)
-                  AND user_id NOT IN (SELECT direct_user_low FROM conversations WHERE direct_user_low IS NOT NULL)
-                  AND user_id NOT IN (SELECT direct_user_high FROM conversations WHERE direct_user_high IS NOT NULL)
-                """)) {
+        try (PreparedStatement ps = conn.prepareStatement("DELETE FROM contacts "
+                + "WHERE user_id <> ? "
+                + "  AND user_id NOT IN (SELECT user_id FROM conversation_members) "
+                + "  AND user_id NOT IN (SELECT sender_id FROM messages) "
+                + "  AND user_id NOT IN (SELECT direct_user_low FROM conversations WHERE direct_user_low IS NOT NULL) "
+                + "  AND user_id NOT IN (SELECT direct_user_high FROM conversations WHERE direct_user_high IS NOT NULL) ")) {
             ps.setLong(1, me);
             ps.executeUpdate();
         }
@@ -275,11 +286,9 @@ public final class ConversationDao extends BaseDao {
 
     public void addMember(long conversationId, long userId, String role) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO conversation_members (conversation_id, user_id, role, joined_at)
-                    VALUES (?, ?, ?, ?)
-                    ON CONFLICT(conversation_id, user_id) DO UPDATE SET role = excluded.role
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO conversation_members (conversation_id, user_id, role, joined_at) "
+                    + "VALUES (?, ?, ?, ?) "
+                    + "ON CONFLICT(conversation_id, user_id) DO UPDATE SET role = excluded.role ")) {
                 ps.setLong(1, conversationId);
                 ps.setLong(2, userId);
                 ps.setString(3, role);
@@ -294,22 +303,20 @@ public final class ConversationDao extends BaseDao {
     public List<ConversationItem> list(String query) {
         String pattern = "%" + escapeLike(query == null ? "" : query.trim()) + "%";
         return db.read(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    SELECT c.conversation_id, c.type, c.unread_count, c.updated_at,
-                           COALESCE(c.title, '@' || peer.username,
-                                    CASE WHEN c.type = 'GROUP' THEN 'Group #' || c.conversation_id ELSE 'Unknown' END) AS shown_title,
-                           lm.plaintext_content, lm.sender_id, sender.username, lm.msg_type
-                    FROM conversations c
-                    LEFT JOIN contacts peer
-                           ON c.type = 'DIRECT'
-                          AND peer.user_id = CASE WHEN c.direct_user_low = ? THEN c.direct_user_high ELSE c.direct_user_low END
-                    LEFT JOIN messages lm
-                           ON lm.local_id = (SELECT m.local_id FROM messages m WHERE m.conversation_id = c.conversation_id
-                                             ORDER BY (m.server_msg_id IS NULL) DESC, m.server_msg_id DESC, m.local_id DESC LIMIT 1)
-                    LEFT JOIN contacts sender ON sender.user_id = lm.sender_id
-                    WHERE shown_title LIKE ? ESCAPE '\\'
-                    ORDER BY c.updated_at DESC, c.conversation_id DESC
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("SELECT c.conversation_id, c.type, c.unread_count, c.updated_at, "
+                    + "       COALESCE(c.title, '@' || peer.username, "
+                    + "                CASE WHEN c.type = 'GROUP' THEN 'Group #' || c.conversation_id ELSE 'Unknown' END) AS shown_title, "
+                    + "       lm.plaintext_content, lm.sender_id, sender.username, lm.msg_type "
+                    + "FROM conversations c "
+                    + "LEFT JOIN contacts peer "
+                    + "       ON c.type = 'DIRECT' "
+                    + "      AND peer.user_id = CASE WHEN c.direct_user_low = ? THEN c.direct_user_high ELSE c.direct_user_low END "
+                    + "LEFT JOIN messages lm "
+                    + "       ON lm.local_id = (SELECT m.local_id FROM messages m WHERE m.conversation_id = c.conversation_id "
+                    + "                         ORDER BY (m.server_msg_id IS NULL) DESC, m.server_msg_id DESC, m.local_id DESC LIMIT 1) "
+                    + "LEFT JOIN contacts sender ON sender.user_id = lm.sender_id "
+                    + "WHERE shown_title LIKE ? ESCAPE '\\\\' "
+                    + "ORDER BY c.updated_at DESC, c.conversation_id DESC ")) {
                 ps.setLong(1, me);
                 ps.setString(2, pattern);
                 List<ConversationItem> items = new ArrayList<>();

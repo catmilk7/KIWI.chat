@@ -61,7 +61,7 @@ class ChatDatabaseTest {
         assertThrows(DatabaseException.class, () -> ChatDatabase.open(file, wrong));
 
         db = ChatDatabase.open(file, key);
-        assertEquals("TOP-SECRET-TEXT", new MessageDao(db, ME).list(CONV).get(0).content());
+        assertEquals("TOP-SECRET-TEXT", new MessageDao(db, ME).list(CONV).get(0).getContent());
     }
 
     @Test
@@ -78,14 +78,14 @@ class ChatDatabaseTest {
     @Test
     void outgoingMessageLifecycle() {
         Message sent = messages.insertOutgoing(CONV, "hello");
-        assertEquals(DeliveryStatus.SENDING, sent.status());
+        assertEquals(DeliveryStatus.SENDING, sent.getStatus());
         assertEquals("You: hello", conversations.list("").get(0).lastPreview());
         assertEquals(1, messages.pendingOutgoing().size());
 
-        messages.markSent(sent.clientMsgId(), 77);
+        messages.markSent(sent.getClientMsgId(), 77);
         Message stored = messages.list(CONV).get(0);
-        assertEquals(DeliveryStatus.SENT, stored.status());
-        assertEquals(77L, stored.serverMsgId());
+        assertEquals(DeliveryStatus.SENT, stored.getStatus());
+        assertEquals(77L, stored.getServerMsgId());
         assertTrue(messages.pendingOutgoing().isEmpty());
     }
 
@@ -97,9 +97,9 @@ class ChatDatabaseTest {
 
         List<Message> list = messages.list(CONV);
         assertEquals(1, list.size());
-        assertEquals("bob", list.get(0).senderUsername());
+        assertEquals("bob", list.get(0).getSenderUsername());
         assertEquals(1, conversations.list("").get(0).unreadCount());
-        assertEquals(88, new AccountDao(db).get().syncCursor());
+        assertEquals(88, new AccountDao(db).get().getSyncCursor());
 
         conversations.markRead(CONV);
         assertEquals(0, conversations.list("").get(0).unreadCount());
@@ -108,11 +108,11 @@ class ChatDatabaseTest {
     @Test
     void ownMessageEchoedByTheServerIsNotDuplicated() {
         Message sent = messages.insertOutgoing(CONV, "hello");
-        assertFalse(messages.saveIncoming(90, sent.clientMsgId(), CONV, ME, MessageType.TEXT, "hello", sent.createdAt()));
+        assertFalse(messages.saveIncoming(90, sent.getClientMsgId(), CONV, ME, MessageType.TEXT, "hello", sent.getCreatedAt()));
 
         List<Message> list = messages.list(CONV);
         assertEquals(1, list.size());
-        assertEquals(90L, list.get(0).serverMsgId());
+        assertEquals(90L, list.get(0).getServerMsgId());
         assertEquals(0, conversations.list("").get(0).unreadCount());
     }
 
@@ -121,8 +121,8 @@ class ChatDatabaseTest {
         var file = new com.vgu.client.models.messaging.FileAttachment(42, "a2V5", "cv.pdf", 2048);
         Message sent = messages.insertOutgoingFile(CONV, file);
 
-        assertEquals(MessageType.FILE_KEY, sent.type());
-        var stored = com.vgu.client.models.messaging.FileAttachment.fromJson(messages.list(CONV).get(0).content());
+        assertEquals(MessageType.FILE_KEY, sent.getType());
+        var stored = com.vgu.client.models.messaging.FileAttachment.fromJson(messages.list(CONV).get(0).getContent());
         assertEquals(file, stored);
         assertTrue(conversations.list("").get(0).lastPreview().contains("Attachment"));
         assertNull(com.vgu.client.models.messaging.FileAttachment.fromJson("just text"));
@@ -135,14 +135,14 @@ class ChatDatabaseTest {
 
         conversations.saveInvite(11, "7Q4M2X9TAB3C", Instant.now().plusSeconds(3600));
         var invite = conversations.activeInvite(11);
-        assertEquals("7Q4M2X9TAB3C", invite.code());
-        assertTrue(invite.expiresAt().isAfter(Instant.now()));
+        assertEquals("7Q4M2X9TAB3C", invite.getCode());
+        assertTrue(invite.getExpiresAt().isAfter(Instant.now()));
 
         // survives reopening the database
         db.close();
         db = ChatDatabase.open(file, key);
         conversations = new ConversationDao(db, ME);
-        assertEquals("7Q4M2X9TAB3C", conversations.activeInvite(11).code());
+        assertEquals("7Q4M2X9TAB3C", conversations.activeInvite(11).getCode());
 
         conversations.saveInvite(11, "OLDCODE", Instant.now().minusSeconds(5));
         assertNull(conversations.activeInvite(11));
@@ -173,8 +173,8 @@ class ChatDatabaseTest {
 
         var asReal = new ConversationDao(db, 42);
         assertEquals("OWNER", asReal.myRole(5));
-        assertEquals(42L, new MessageDao(db, 42).list(5).get(0).senderId());
-        assertEquals("legacy", new MessageDao(db, 42).list(5).get(0).senderUsername());
+        assertEquals(42L, new MessageDao(db, 42).list(5).get(0).getSenderId());
+        assertEquals("legacy", new MessageDao(db, 42).list(5).get(0).getSenderUsername());
         assertTrue(new ContactDao(db).listMembers(5, 42).isEmpty()); // no ghost "local" member left behind
     }
 
@@ -256,13 +256,13 @@ class ChatDatabaseTest {
 
         Message mine = messages.insertOutgoing(CONV, "written after, stamped by our slower clock");
         assertEquals(List.of("from bob", "written after, stamped by our slower clock"),
-                messages.list(CONV).stream().map(Message::content).toList()); // unsent goes last, not first
+                messages.list(CONV).stream().map(m -> m.getContent()).toList()); // unsent goes last, not first
 
-        messages.markSent(mine.clientMsgId(), 501, serverNow.plusSeconds(1));
+        messages.markSent(mine.getClientMsgId(), 501, serverNow.plusSeconds(1));
         messages.saveIncoming(502, "theirs-2", CONV, BOB, MessageType.TEXT, "bob again", serverNow.plusSeconds(2));
         assertEquals(List.of("from bob", "written after, stamped by our slower clock", "bob again"),
-                messages.list(CONV).stream().map(Message::content).toList());
-        assertEquals(serverNow.plusSeconds(1), messages.list(CONV).get(1).createdAt()); // shown with the server's time
+                messages.list(CONV).stream().map(m -> m.getContent()).toList());
+        assertEquals(serverNow.plusSeconds(1), messages.list(CONV).get(1).getCreatedAt()); // shown with the server's time
 
         // ... and the conversation list previews the newest message in that same order
         assertEquals("bob again", conversations.list("").get(0).lastPreview());
@@ -276,7 +276,7 @@ class ChatDatabaseTest {
             }
             throw new java.sql.SQLException("boom");
         }));
-        assertEquals(0, new AccountDao(db).get().syncCursor());
+        assertEquals(0, new AccountDao(db).get().getSyncCursor());
     }
 
     @Test
@@ -287,6 +287,6 @@ class ChatDatabaseTest {
         conversations.addMember(11, BOB, "MEMBER");
         var members = contacts.listMembers(11, ME);
         assertEquals(1, members.size());
-        assertEquals("bob", members.get(0).username());
+        assertEquals("bob", members.get(0).getUsername());
     }
 }

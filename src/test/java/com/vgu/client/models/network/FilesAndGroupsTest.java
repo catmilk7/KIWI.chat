@@ -45,12 +45,12 @@ class FilesAndGroupsTest {
 
         FileService.FileRef ref = session.files().upload(image);
 
-        byte[] stored = server.storedFile(ref.fileId());
+        byte[] stored = server.storedFile(ref.getFileId());
         assertNotNull(stored);
         assertFalse(new String(stored, StandardCharsets.ISO_8859_1).contains("AVATAR"));
         assertArrayEquals(image, session.files().download(ref));
 
-        FileService.FileRef wrongKey = new FileService.FileRef(ref.fileId(),
+        FileService.FileRef wrongKey = new FileService.FileRef(ref.getFileId(),
                 java.util.Base64.getEncoder().encodeToString(new byte[32]));
         assertThrows(RuntimeException.class, () -> session.files().download(wrongKey));
     }
@@ -59,7 +59,7 @@ class FilesAndGroupsTest {
     void deliveryTokenIsSingleUse() throws Exception {
         ServerApi api = new ServerApi(new ApiClient(server.url()));
         api.client().setToken("jwt-alice");
-        String token = api.mintUploadToken().token();
+        String token = api.mintUploadToken().getToken();
         api.uploadFile(token, new byte[]{1, 2, 3});
         ApiException e = assertThrows(ApiException.class, () -> api.uploadFile(token, new byte[]{1, 2, 3}));
         assertEquals(401, e.status());
@@ -69,11 +69,11 @@ class FilesAndGroupsTest {
     void avatarIsKeptLocally() throws Exception {
         byte[] image = {9, 8, 7};
         FileService.FileRef ref = session.files().upload(image);
-        session.account().saveAvatar(image, ref.fileId(), ref.keyBase64());
+        session.account().saveAvatar(image, ref.getFileId(), ref.getKeyBase64());
 
         var saved = session.account().avatar();
-        assertArrayEquals(image, saved.image());
-        assertEquals(ref.fileId(), saved.fileId());
+        assertArrayEquals(image, saved.getImage());
+        assertEquals(ref.getFileId(), saved.getFileId());
     }
 
     @Test
@@ -92,8 +92,8 @@ class FilesAndGroupsTest {
     void inviteCodeCanBeMintedAndRedeemed() throws Exception {
         long id = session.groups().createGroup("Invite Group");
         Dto.Invite invite = session.groups().mintInvite(id);
-        assertEquals("7Q4M2X9TAB3C", invite.code());
-        assertEquals("7Q4M2X9TAB3C", session.conversations().activeInvite(id).code()); // kept in the .db
+        assertEquals("7Q4M2X9TAB3C", invite.getCode());
+        assertEquals("7Q4M2X9TAB3C", session.conversations().activeInvite(id).getCode()); // kept in the .db
 
         long joined = session.groups().join("7q4m-2x9t ab3c"); // same normalisation as the server
         assertEquals(id, joined);
@@ -107,7 +107,7 @@ class FilesAndGroupsTest {
     @Test
     void secondAccountCanJoinWithTheOwnersInviteCode() throws Exception {
         long id = session.groups().createGroup("Shared");
-        String code = session.groups().mintInvite(id).code();
+        String code = session.groups().mintInvite(id).getCode();
 
         AuthService other = new AuthService(dir, new AESCryptoService(), new RsaPssSignatureService(),
                 new ServerApi(new ApiClient(server.url())));

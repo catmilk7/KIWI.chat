@@ -9,7 +9,22 @@ import java.util.Optional;
 public final class GroupKeyDao extends BaseDao {
 
     /** A stored key and, for our own keys, whether every member has received it yet. */
-    public record Entry(String keyBase64, boolean distributed) {
+    public static final class Entry {
+        private final String keyBase64;
+        private final boolean distributed;
+
+        public Entry(String keyBase64, boolean distributed) {
+            this.keyBase64 = keyBase64;
+            this.distributed = distributed;
+        }
+
+        public String getKeyBase64() {
+            return keyBase64;
+        }
+
+        public boolean isDistributed() {
+            return distributed;
+        }
     }
 
     public GroupKeyDao(ChatDatabase db) {
@@ -19,11 +34,9 @@ public final class GroupKeyDao extends BaseDao {
     /** Stores a key unless one already exists for this (conversation, sender, epoch). */
     public void save(long conversationId, long senderId, long epoch, String keyBase64, boolean distributed) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO group_sender_keys (conversation_id, sender_id, epoch, symmetric_key, distributed, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    ON CONFLICT DO NOTHING
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO group_sender_keys (conversation_id, sender_id, epoch, symmetric_key, distributed, created_at) "
+                    + "VALUES (?, ?, ?, ?, ?, ?) "
+                    + "ON CONFLICT DO NOTHING ")) {
                 ps.setLong(1, conversationId);
                 ps.setLong(2, senderId);
                 ps.setLong(3, epoch);
@@ -42,10 +55,8 @@ public final class GroupKeyDao extends BaseDao {
 
     public void markDistributed(long conversationId, long senderId, long epoch) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    UPDATE group_sender_keys SET distributed = 1
-                    WHERE conversation_id = ? AND sender_id = ? AND epoch = ?
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE group_sender_keys SET distributed = 1 "
+                    + "WHERE conversation_id = ? AND sender_id = ? AND epoch = ? ")) {
                 ps.setLong(1, conversationId);
                 ps.setLong(2, senderId);
                 ps.setLong(3, epoch);
@@ -57,10 +68,8 @@ public final class GroupKeyDao extends BaseDao {
 
     public Optional<Entry> findEntry(long conversationId, long senderId, long epoch) {
         return db.read(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    SELECT symmetric_key, distributed FROM group_sender_keys
-                    WHERE conversation_id = ? AND sender_id = ? AND epoch = ?
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("SELECT symmetric_key, distributed FROM group_sender_keys "
+                    + "WHERE conversation_id = ? AND sender_id = ? AND epoch = ? ")) {
                 ps.setLong(1, conversationId);
                 ps.setLong(2, senderId);
                 ps.setLong(3, epoch);
@@ -72,6 +81,6 @@ public final class GroupKeyDao extends BaseDao {
     }
 
     public Optional<String> find(long conversationId, long senderId, long epoch) {
-        return findEntry(conversationId, senderId, epoch).map(Entry::keyBase64);
+        return findEntry(conversationId, senderId, epoch).map(entry -> entry.getKeyBase64());
     }
 }

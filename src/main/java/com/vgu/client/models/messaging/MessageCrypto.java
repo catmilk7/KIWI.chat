@@ -32,15 +32,66 @@ import java.util.Base64;
 public final class MessageCrypto {
 
     /** The two strings that travel to the server: {@code ciphertext} and {@code iv} (Base64). */
-    public record Envelope(String ciphertext, String iv) {
+    public static final class Envelope {
+        private final String ciphertext;
+        private final String iv;
+
+        public Envelope(String ciphertext, String iv) {
+            this.ciphertext = ciphertext;
+            this.iv = iv;
+        }
+
+        public String getCiphertext() {
+            return ciphertext;
+        }
+
+        public String getIv() {
+            return iv;
+        }
     }
 
     /** What a sender key package carries: the key, who the sender is, and (if known) the group name. */
-    public record SenderKeyPackage(String key, String username, String groupName) {
+    public static final class SenderKeyPackage {
+        private final String key;
+        private final String username;
+        private final String groupName;
+
+        public SenderKeyPackage(String key, String username, String groupName) {
+            this.key = key;
+            this.username = username;
+            this.groupName = groupName;
+        }
+
+        public String getKey() {
+            return key;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public String getGroupName() {
+            return groupName;
+        }
     }
 
     /** What a direct message carries inside the encryption: who wrote it and the text. */
-    public record DirectPayload(String sender, String body) {
+    public static final class DirectPayload {
+        private final String sender;
+        private final String body;
+
+        public DirectPayload(String sender, String body) {
+            this.sender = sender;
+            this.body = body;
+        }
+
+        public String getSender() {
+            return sender;
+        }
+
+        public String getBody() {
+            return body;
+        }
     }
 
     private final CryptoService crypto;
@@ -64,17 +115,17 @@ public final class MessageCrypto {
                               String clientMsgId, String plaintext) {
         byte[] aad = aad(type, conversationId, senderId, null, epoch, clientMsgId);
         Sealed sealed = crypto.encrypt(senderKey, plaintext.getBytes(StandardCharsets.UTF_8), aad);
-        byte[] signature = signatures.sign(identity.signing().getPrivate(),
-                signedBytes(aad, sealed.iv(), sealed.ciphertext()));
-        return new Envelope(b64(sealed.ciphertext()) + "." + b64(signature), b64(sealed.iv()));
+        byte[] signature = signatures.sign(identity.getSigning().getPrivate(),
+                signedBytes(aad, sealed.getIv(), sealed.getCiphertext()));
+        return new Envelope(b64(sealed.getCiphertext()) + "." + b64(signature), b64(sealed.getIv()));
     }
 
     /** @throws CryptoException if the signature or the authentication tag does not verify */
     public String openGroup(SecretKey senderKey, PublicKey senderSigningKey, MessageType type, long conversationId,
                             long senderId, long epoch, String clientMsgId, Envelope envelope) {
-        String[] parts = split(envelope.ciphertext(), 2);
+        String[] parts = split(envelope.getCiphertext(), 2);
         byte[] ciphertext = unb64(parts[0]);
-        byte[] iv = unb64(envelope.iv());
+        byte[] iv = unb64(envelope.getIv());
         byte[] aad = aad(type, conversationId, senderId, null, epoch, clientMsgId);
         if (!signatures.verify(senderSigningKey, signedBytes(aad, iv, ciphertext), unb64(parts[1]))) {
             throw new CryptoException("Bad message signature");
@@ -94,13 +145,13 @@ public final class MessageCrypto {
         byte[] aad = aad(type, conversationId, senderId, null, 0, clientMsgId);
         SecretKey messageKey = crypto.generateAesKey();
         byte[] forPeer = crypto.wrapKey(peerEncryptionKey, messageKey);
-        byte[] forMe = crypto.wrapKey(identity.encryption().getPublic(), messageKey);
+        byte[] forMe = crypto.wrapKey(identity.getEncryption().getPublic(), messageKey);
         byte[] payload = gson.toJson(new DirectPayload(senderUsername, plaintext)).getBytes(StandardCharsets.UTF_8);
         Sealed sealed = crypto.encrypt(messageKey, payload, aad);
-        byte[] signature = signatures.sign(identity.signing().getPrivate(),
-                signedBytes(aad, sealed.iv(), forPeer, forMe, sealed.ciphertext()));
-        return new Envelope(b64(forPeer) + "." + b64(forMe) + "." + b64(sealed.ciphertext()) + "." + b64(signature),
-                b64(sealed.iv()));
+        byte[] signature = signatures.sign(identity.getSigning().getPrivate(),
+                signedBytes(aad, sealed.getIv(), forPeer, forMe, sealed.getCiphertext()));
+        return new Envelope(b64(forPeer) + "." + b64(forMe) + "." + b64(sealed.getCiphertext()) + "." + b64(signature),
+                b64(sealed.getIv()));
     }
 
     /**
@@ -112,11 +163,11 @@ public final class MessageCrypto {
     public DirectPayload openDirect(PrivateKey ownEncryptionKey, PublicKey senderSigningKey, boolean fromMe,
                                     MessageType type, long conversationId, long senderId, String clientMsgId,
                                     Envelope envelope) {
-        String[] parts = split(envelope.ciphertext(), 4);
+        String[] parts = split(envelope.getCiphertext(), 4);
         byte[] forPeer = unb64(parts[0]);
         byte[] forMe = unb64(parts[1]);
         byte[] ciphertext = unb64(parts[2]);
-        byte[] iv = unb64(envelope.iv());
+        byte[] iv = unb64(envelope.getIv());
         byte[] aad = aad(type, conversationId, senderId, null, 0, clientMsgId);
         if (!signatures.verify(senderSigningKey, signedBytes(aad, iv, forPeer, forMe, ciphertext), unb64(parts[3]))) {
             throw new CryptoException("Bad message signature");
@@ -125,7 +176,7 @@ public final class MessageCrypto {
         byte[] json = crypto.decrypt(messageKey, new Sealed(iv, ciphertext), aad);
         try {
             DirectPayload payload = gson.fromJson(new String(json, StandardCharsets.UTF_8), DirectPayload.class);
-            if (payload == null || payload.body() == null) {
+            if (payload == null || payload.getBody() == null) {
                 throw new CryptoException("Empty direct message");
             }
             return payload;
@@ -142,19 +193,19 @@ public final class MessageCrypto {
         SecretKey packageKey = crypto.generateAesKey();
         byte[] wrapped = crypto.wrapKey(recipientEncryptionKey, packageKey);
         Sealed sealed = crypto.encrypt(packageKey, gson.toJson(pkg).getBytes(StandardCharsets.UTF_8), aad);
-        byte[] signature = signatures.sign(identity.signing().getPrivate(),
-                signedBytes(aad, sealed.iv(), wrapped, sealed.ciphertext()));
-        return new Envelope(b64(wrapped) + "." + b64(sealed.ciphertext()) + "." + b64(signature), b64(sealed.iv()));
+        byte[] signature = signatures.sign(identity.getSigning().getPrivate(),
+                signedBytes(aad, sealed.getIv(), wrapped, sealed.getCiphertext()));
+        return new Envelope(b64(wrapped) + "." + b64(sealed.getCiphertext()) + "." + b64(signature), b64(sealed.getIv()));
     }
 
     /** @throws CryptoException if the signature, the key unwrapping or the authentication tag fails */
     public SenderKeyPackage openPackage(PrivateKey ownEncryptionKey, PublicKey senderSigningKey, long conversationId,
                                         long senderId, long recipientId, long epoch, String clientMsgId,
                                         Envelope envelope) {
-        String[] parts = split(envelope.ciphertext(), 3);
+        String[] parts = split(envelope.getCiphertext(), 3);
         byte[] wrapped = unb64(parts[0]);
         byte[] ciphertext = unb64(parts[1]);
-        byte[] iv = unb64(envelope.iv());
+        byte[] iv = unb64(envelope.getIv());
         byte[] aad = aad(MessageType.SENDER_KEY, conversationId, senderId, recipientId, epoch, clientMsgId);
         if (!signatures.verify(senderSigningKey, signedBytes(aad, iv, wrapped, ciphertext), unb64(parts[2]))) {
             throw new CryptoException("Bad sender key signature");
@@ -163,7 +214,7 @@ public final class MessageCrypto {
         byte[] json = crypto.decrypt(packageKey, new Sealed(iv, ciphertext), aad);
         try {
             SenderKeyPackage pkg = gson.fromJson(new String(json, StandardCharsets.UTF_8), SenderKeyPackage.class);
-            if (pkg == null || pkg.key() == null) {
+            if (pkg == null || pkg.getKey() == null) {
                 throw new CryptoException("Empty sender key package");
             }
             return pkg;

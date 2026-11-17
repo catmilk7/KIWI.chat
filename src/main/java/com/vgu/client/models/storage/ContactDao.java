@@ -15,15 +15,13 @@ public final class ContactDao extends BaseDao {
     /** Inserts the contact, or refreshes its username and keys if it already exists. */
     public void upsert(long userId, String username, String encryptionPublicKey, String identitySigningPublicKey) {
         db.write(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    INSERT INTO contacts (user_id, username, encryption_public_key, identity_signing_public_key, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                    ON CONFLICT(user_id) DO UPDATE SET
-                        username = excluded.username,
-                        encryption_public_key = excluded.encryption_public_key,
-                        identity_signing_public_key = excluded.identity_signing_public_key,
-                        updated_at = excluded.updated_at
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO contacts (user_id, username, encryption_public_key, identity_signing_public_key, updated_at) "
+                    + "VALUES (?, ?, ?, ?, ?) "
+                    + "ON CONFLICT(user_id) DO UPDATE SET "
+                    + "    username = excluded.username, "
+                    + "    encryption_public_key = excluded.encryption_public_key, "
+                    + "    identity_signing_public_key = excluded.identity_signing_public_key, "
+                    + "    updated_at = excluded.updated_at ")) {
                 ps.setLong(1, userId);
                 ps.setString(2, username);
                 ps.setString(3, encryptionPublicKey);
@@ -53,11 +51,42 @@ public final class ContactDao extends BaseDao {
         });
     }
 
-    public record Keys(String encryptionPublicKey, String identitySigningPublicKey) {
+    public static final class Keys {
+        private final String encryptionPublicKey;
+        private final String identitySigningPublicKey;
+
+        public Keys(String encryptionPublicKey, String identitySigningPublicKey) {
+            this.encryptionPublicKey = encryptionPublicKey;
+            this.identitySigningPublicKey = identitySigningPublicKey;
+        }
+
+        public String getEncryptionPublicKey() {
+            return encryptionPublicKey;
+        }
+
+        public String getIdentitySigningPublicKey() {
+            return identitySigningPublicKey;
+        }
     }
 
     /** A member of a conversation as the member list shows it. */
-    public record Member(long userId, String username) {
+    public static final class Member {
+        private final long userId;
+        private final String username;
+
+        public Member(long userId, String username) {
+            this.userId = userId;
+            this.username = username;
+        }
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
         public Member() {
             this(0, "");
         }
@@ -86,10 +115,8 @@ public final class ContactDao extends BaseDao {
     public void saveKeys(long userId, String encryptionPublicKey, String identitySigningPublicKey) {
         ensure(userId);
         db.write(conn -> {
-            try (PreparedStatement ps = conn.prepareStatement("""
-                    UPDATE contacts SET encryption_public_key = ?, identity_signing_public_key = ?, updated_at = ?
-                    WHERE user_id = ?
-                    """)) {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE contacts SET encryption_public_key = ?, identity_signing_public_key = ?, updated_at = ? "
+                    + "WHERE user_id = ? ")) {
                 ps.setString(1, encryptionPublicKey);
                 ps.setString(2, identitySigningPublicKey);
                 ps.setString(3, now());
@@ -120,13 +147,11 @@ public final class ContactDao extends BaseDao {
     /** Members of a conversation except {@code excludeUserId} (usually the account owner). */
     public List<Member> listMembers(long conversationId, long excludeUserId) {
         return db.read(c -> {
-            try (PreparedStatement ps = c.prepareStatement("""
-                    SELECT ct.user_id, ct.username
-                    FROM conversation_members m
-                    JOIN contacts ct ON ct.user_id = m.user_id
-                    WHERE m.conversation_id = ? AND m.user_id <> ?
-                    ORDER BY ct.username
-                    """)) {
+            try (PreparedStatement ps = c.prepareStatement("SELECT ct.user_id, ct.username "
+                    + "FROM conversation_members m "
+                    + "JOIN contacts ct ON ct.user_id = m.user_id "
+                    + "WHERE m.conversation_id = ? AND m.user_id <> ? "
+                    + "ORDER BY ct.username ")) {
                 ps.setLong(1, conversationId);
                 ps.setLong(2, excludeUserId);
                 List<Member> members = new ArrayList<>();

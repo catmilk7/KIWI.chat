@@ -11,7 +11,23 @@ import java.util.Optional;
  * A user's two long-term RSA key pairs: one for encryption (OAEP), one for
  * identity signing (PSS). Private halves never leave the {@link SecureKeyStore}.
  */
-public record IdentityKeyPair(KeyPair encryption, KeyPair signing) {
+public final class IdentityKeyPair {
+    private final KeyPair encryption;
+    private final KeyPair signing;
+
+    public IdentityKeyPair(KeyPair encryption, KeyPair signing) {
+        this.encryption = encryption;
+        this.signing = signing;
+    }
+
+    public KeyPair getEncryption() {
+        return encryption;
+    }
+
+    public KeyPair getSigning() {
+        return signing;
+    }
+
 
     private static final String ENC_PRIV = "identity.enc.private";
     private static final String ENC_PUB = "identity.enc.public";

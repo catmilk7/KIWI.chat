@@ -50,6 +50,6 @@ public final class AttachmentContent extends MessageContent {
 
     @Override
     public String toString() {
-        return "AttachmentContent[" + file.name() + "]";
+        return "AttachmentContent[" + file.getName() + "]";
     }
 }

@@ -31,14 +31,14 @@ public final class ServerApi {
         body.put("encryptionPublicKey", encryptionPublicKey);
         body.put("identitySigningPublicKey", identitySigningPublicKey);
         Dto.Auth auth = client.json("POST", "/api/auth/register", body, Dto.Auth.class);
-        client.setToken(auth.token());
+        client.setToken(auth.getToken());
         return auth;
     }
 
     public Dto.Auth login(String username, String password) throws ApiException {
         Dto.Auth auth = client.json("POST", "/api/auth/login",
                 Map.of("username", username, "password", password), Dto.Auth.class);
-        client.setToken(auth.token());
+        client.setToken(auth.getToken());
         return auth;
     }
 

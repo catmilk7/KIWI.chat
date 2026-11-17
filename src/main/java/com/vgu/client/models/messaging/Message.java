@@ -10,17 +10,71 @@ import java.time.Instant;
  * server has acknowledged it. {@code senderUsername} comes from the contacts
  * table and is null for the account owner's own messages.
  */
-public record Message(
-        long localId,
-        Long serverMsgId,
-        String clientMsgId,
-        long conversationId,
-        long senderId,
-        String senderUsername,
-        MessageType type,
-        String content,
-        DeliveryStatus status,
-        Instant createdAt) {
+public final class Message {
+    private final long localId;
+    private final Long serverMsgId;
+    private final String clientMsgId;
+    private final long conversationId;
+    private final long senderId;
+    private final String senderUsername;
+    private final MessageType type;
+    private final String content;
+    private final DeliveryStatus status;
+    private final Instant createdAt;
+
+    public Message(long localId, Long serverMsgId, String clientMsgId, long conversationId, long senderId, String senderUsername, MessageType type, String content, DeliveryStatus status, Instant createdAt) {
+        this.localId = localId;
+        this.serverMsgId = serverMsgId;
+        this.clientMsgId = clientMsgId;
+        this.conversationId = conversationId;
+        this.senderId = senderId;
+        this.senderUsername = senderUsername;
+        this.type = type;
+        this.content = content;
+        this.status = status;
+        this.createdAt = createdAt;
+    }
+
+    public long getLocalId() {
+        return localId;
+    }
+
+    public Long getServerMsgId() {
+        return serverMsgId;
+    }
+
+    public String getClientMsgId() {
+        return clientMsgId;
+    }
+
+    public long getConversationId() {
+        return conversationId;
+    }
+
+    public long getSenderId() {
+        return senderId;
+    }
+
+    public String getSenderUsername() {
+        return senderUsername;
+    }
+
+    public MessageType getType() {
+        return type;
+    }
+
+    public String getContent() {
+        return content;
+    }
+
+    public DeliveryStatus getStatus() {
+        return status;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
 
     /** A blank message: not yet sent, no text, created now. */
     public Message() {

@@ -108,7 +108,7 @@ public class Chat {
         if (currentUserNameLabel != null) {
             currentUserNameLabel.setText(session.handle());
         }
-        session.onChange(() -> Platform.runLater(this::refreshFromDatabase));
+        session.onChange(() -> Platform.runLater(() -> refreshFromDatabase()));
 
         List<ConversationItem> allConvs = session.conversations().list("");
         renderContactList(allConvs);
@@ -267,7 +267,7 @@ public class Chat {
             groupSettingsBtn.setManaged(conv.hasSettings());
         }
         if (activeChatAvatar != null) {
-            var stream = getClass().getResourceAsStream(conv.avatarResource());
+            java.io.InputStream stream = getClass().getResourceAsStream(conv.avatarResource());
             if (stream != null) activeChatAvatar.setImage(new Image(stream));
         }
 
@@ -287,12 +287,12 @@ public class Chat {
 
         LocalDate lastDay = null;
         for (Message msg : session.messages().list(conv.id())) {
-            LocalDate day = msg.createdAt().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate day = msg.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDate();
             if (!day.equals(lastDay)) {
                 messagesContainer.getChildren().add(buildDateSeparator(formatDay(day)));
                 lastDay = day;
             }
-            messagesContainer.getChildren().add(buildMessageBubble(msg, msg.senderId() == session.userId()));
+            messagesContainer.getChildren().add(buildMessageBubble(msg, msg.getSenderId() == session.userId()));
         }
 
         Platform.runLater(() -> {
@@ -308,7 +308,7 @@ public class Chat {
     }
 
     private String formatListTime(ConversationItem conv) {
-        var time = conv.updatedAt().atZone(ZoneId.systemDefault());
+        java.time.ZonedDateTime time = conv.updatedAt().atZone(ZoneId.systemDefault());
         return time.toLocalDate().equals(LocalDate.now())
                 ? time.format(timeFormatter)
                 : time.format(DateTimeFormatter.ofPattern("dd MMM"));
@@ -329,7 +329,7 @@ public class Chat {
         avatar.setStyle("-fx-cursor: hand;");
         avatar.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY) {
-                showUserProfile(senderHandle(msg, isMe), isMe ? 0 : msg.senderId(), e.getSceneX(), e.getSceneY());
+                showUserProfile(senderHandle(msg, isMe), isMe ? 0 : msg.getSenderId(), e.getSceneX(), e.getSceneY());
                 e.consume();
             }
         });
@@ -344,15 +344,15 @@ public class Chat {
         nameLbl.setTextFill(Color.GRAY);
         nameLbl.setStyle("-fx-font-size: 11px;");
 
-        Label timeLbl = new Label(msg.createdAt().atZone(ZoneId.systemDefault()).format(timeFormatter));
+        Label timeLbl = new Label(msg.getCreatedAt().atZone(ZoneId.systemDefault()).format(timeFormatter));
         timeLbl.setTextFill(Color.web("#a1a1aa"));
         timeLbl.setStyle("-fx-font-size: 10px;");
 
-        if (isMe && msg.status() != com.vgu.client.enums.DeliveryStatus.SENT) {
-            Label statusLbl = new Label(msg.status() == com.vgu.client.enums.DeliveryStatus.FAILED
+        if (isMe && msg.getStatus() != com.vgu.client.enums.DeliveryStatus.SENT) {
+            Label statusLbl = new Label(msg.getStatus() == com.vgu.client.enums.DeliveryStatus.FAILED
                     ? "Not sent" : "Sending...");
             statusLbl.setStyle("-fx-font-size: 10px; -fx-text-fill: "
-                    + (msg.status() == com.vgu.client.enums.DeliveryStatus.FAILED ? "#ef4444" : "#9ca3af") + ";");
+                    + (msg.getStatus() == com.vgu.client.enums.DeliveryStatus.FAILED ? "#ef4444" : "#9ca3af") + ";");
             metaRow.getChildren().add(statusLbl);
         }
         if (isMe) metaRow.getChildren().addAll(timeLbl, nameLbl);
@@ -403,7 +403,7 @@ public class Chat {
 
     private String senderHandle(Message msg, boolean isMe) {
         if (isMe) return session.handle();
-        return "@" + (msg.senderUsername() != null ? msg.senderUsername() : "user#" + msg.senderId());
+        return "@" + (msg.getSenderUsername() != null ? msg.getSenderUsername() : "user#" + msg.getSenderId());
     }
 
     private void showUserProfile(String handle, long userId, double sceneX, double sceneY) {
@@ -633,7 +633,7 @@ public class Chat {
                 byte[] bytes = Files.readAllBytes(file.toPath());
                 FileService.FileRef ref = session.files().upload(bytes);
                 session.sendFile(conversationId,
-                        new FileAttachment(ref.fileId(), ref.keyBase64(), file.getName(), bytes.length));
+                        new FileAttachment(ref.getFileId(), ref.getKeyBase64(), file.getName(), bytes.length));
                 return null;
             }
         };
@@ -649,14 +649,14 @@ public class Chat {
     private void saveAttachment(FileAttachment attachment) {
         FileChooser chooser = new FileChooser();
         chooser.setTitle("Save attachment");
-        chooser.setInitialFileName(attachment.name());
+        chooser.setInitialFileName(attachment.getName());
         File target = chooser.showSaveDialog(rootPane.getScene().getWindow());
         if (target == null) return;
 
         Task<Void> task = new Task<>() {
             @Override
             protected Void call() throws Exception {
-                byte[] bytes = session.files().download(new FileService.FileRef(attachment.fileId(), attachment.key()));
+                byte[] bytes = session.files().download(new FileService.FileRef(attachment.getFileId(), attachment.getKey()));
                 Files.write(target.toPath(), bytes);
                 return null;
             }
@@ -685,7 +685,12 @@ public class Chat {
             long id = task.getValue();
             List<ConversationItem> all = session.conversations().list("");
             renderContactList(all);
-            all.stream().filter(c -> c.id() == id).findFirst().ifPresent(this::selectConversation);
+            for (ConversationItem item : all) {
+                if (item.id() == id) {
+                    selectConversation(item);
+                    break;
+                }
+            }
         });
         task.setOnFailed(e -> showErrorModal("Could not start the chat", describe(task.getException())));
         startBackground(task, "start-direct");
@@ -797,7 +802,7 @@ public class Chat {
         imageView.setPickOnBounds(true);
         imageView.setPreserveRatio(true);
         try {
-            var stream = getClass().getResourceAsStream(resourcePath);
+            java.io.InputStream stream = getClass().getResourceAsStream(resourcePath);
             if (stream != null) imageView.setImage(new Image(stream));
         } catch (Exception ignored) {}
         Circle clip = new Circle(size / 2.0, size / 2.0, size / 2.0);
@@ -830,7 +835,7 @@ public class Chat {
     public void showModal(String fxmlFileName) {
         try {
             String path = "/com/vgu/client/ui/views/settings/" + fxmlFileName;
-            var resourceUrl = getClass().getResource(path);
+            java.net.URL resourceUrl = getClass().getResource(path);
             if (resourceUrl == null) {
                 System.err.println("The FXML file can't be found: " + path);
                 return;
@@ -840,8 +845,9 @@ public class Chat {
             currentOverlay = loader.load();
 
             Object controller = loader.getController();
-            if (controller instanceof Handling baseController) {
-                baseController.setOnCloseCallback(this::closeOverlay);
+            if (controller instanceof Handling) {
+                Handling baseController = (Handling) controller;
+                baseController.setOnCloseCallback(() -> closeOverlay());
             }
 
             AnchorPane.setTopAnchor(currentOverlay, 0.0);
@@ -882,15 +888,16 @@ public class Chat {
     private void showGroupSettingsModal(ConversationItem group) {
         try {
             String path = "/com/vgu/client/ui/views/settings/settings_group.view.fxml";
-            var resourceUrl = getClass().getResource(path);
+            java.net.URL resourceUrl = getClass().getResource(path);
             if (resourceUrl == null) return;
 
             FXMLLoader loader = new FXMLLoader(resourceUrl);
             currentOverlay = loader.load();
 
             Object controller = loader.getController();
-            if (controller instanceof Handling baseController) {
-                baseController.setOnCloseCallback(this::closeOverlay);
+            if (controller instanceof Handling) {
+                Handling baseController = (Handling) controller;
+                baseController.setOnCloseCallback(() -> closeOverlay());
             }
             if (controller instanceof Settings_group groupController) {
                 groupController.setTargetGroup(group);
@@ -922,9 +929,10 @@ public class Chat {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/vgu/client/ui/views/settings/warning.view.fxml"));
             currentOverlay = loader.load();
-            if (loader.getController() instanceof Warning warning) {
+            if (loader.getController() instanceof Warning) {
+                Warning warning = (Warning) loader.getController();
                 warning.setupAsConfirm(message, subtext, onConfirm);
-                warning.setOnCloseCallback(this::closeOverlay);
+                warning.setOnCloseCallback(() -> closeOverlay());
             }
             AnchorPane.setTopAnchor(currentOverlay, 0.0);
             AnchorPane.setBottomAnchor(currentOverlay, 0.0);
@@ -944,9 +952,10 @@ public class Chat {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
             currentOverlay = loader.load();
 
-            if (loader.getController() instanceof Warning warningController) {
+            if (loader.getController() instanceof Warning) {
+                Warning warningController = (Warning) loader.getController();
                 warningController.setupAsError(errorMessage, subtext);
-                warningController.setOnCloseCallback(this::closeOverlay);
+                warningController.setOnCloseCallback(() -> closeOverlay());
             }
 
             AnchorPane.setTopAnchor(currentOverlay, 0.0);

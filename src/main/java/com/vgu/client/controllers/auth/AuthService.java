@@ -62,7 +62,7 @@ public class AuthService {
         if (!java.nio.file.Files.isDirectory(baseDir)) {
             return java.util.List.of();
         }
-        try (var dirs = java.nio.file.Files.list(baseDir)) {
+        try (java.util.stream.Stream<Path> dirs = java.nio.file.Files.list(baseDir)) {
             return dirs.filter(d -> java.nio.file.Files.exists(d.resolve(KEYSTORE_NAME)))
                     .map(d -> d.getFileName().toString())
                     .filter(name -> USERNAME.matcher(name).matches())
@@ -127,7 +127,7 @@ public class AuthService {
             new SecureRandom().nextBytes(dbKey);
             store.storeKey(DB_KEY_ALIAS, dbKey);
             try (ChatDatabase db = ChatDatabase.open(databaseFile(username), dbKey)) {
-                new AccountDao(db).create(username, auth.userId());
+                new AccountDao(db).create(username, auth.getUserId());
             } finally {
                 Arrays.fill(dbKey, (byte) 0);
             }
@@ -178,16 +178,16 @@ public class AuthService {
             throws AuthException {
         AccountDao accounts = new AccountDao(db);
         AccountDao.Account account = accounts.get();
-        long userId = account.userId();
+        long userId = account.getUserId();
         boolean online = false;
         try {
             Dto.Auth auth = api.login(username, new String(password));
-            if (userId != AccountDao.LOCAL_USER_ID && userId != auth.userId()) {
+            if (userId != AccountDao.LOCAL_USER_ID && userId != auth.getUserId()) {
                 throw new AuthException("This device's data belongs to a different server account.");
             }
-            if (userId != auth.userId()) {
-                accounts.bindUserId(auth.userId());
-                userId = auth.userId();
+            if (userId != auth.getUserId()) {
+                accounts.bindUserId(auth.getUserId());
+                userId = auth.getUserId();
             }
             online = true;
         } catch (ApiException e) {
@@ -199,7 +199,7 @@ public class AuthService {
                 throw serverProblem(e, "Could not log in: ");
             }
         }
-        return new Session(account.username(), userId, identity, db, api, crypto, signatures, online);
+        return new Session(account.getUsername(), userId, identity, db, api, crypto, signatures, online);
     }
 
     private static AuthException serverProblem(ApiException e, String prefix) {

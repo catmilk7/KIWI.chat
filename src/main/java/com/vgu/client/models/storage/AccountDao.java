@@ -9,7 +9,28 @@ public final class AccountDao extends BaseDao {
     /** user_id before the server has assigned one; real server ids are always positive. */
     public static final long LOCAL_USER_ID = 0;
 
-    public record Account(long userId, String username, long syncCursor) {
+    public static final class Account {
+        private final long userId;
+        private final String username;
+        private final long syncCursor;
+
+        public Account(long userId, String username, long syncCursor) {
+            this.userId = userId;
+            this.username = username;
+            this.syncCursor = syncCursor;
+        }
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+
+        public long getSyncCursor() {
+            return syncCursor;
+        }
     }
 
     public AccountDao(ChatDatabase db) {
@@ -53,13 +74,11 @@ public final class AccountDao extends BaseDao {
                     "UPDATE contacts SET username = username || '#local' WHERE user_id = ?")) {
                 ps.setLong(1, LOCAL_USER_ID);
                 if (ps.executeUpdate() > 0) {
-                    try (PreparedStatement copy = c.prepareStatement("""
-                            INSERT OR REPLACE INTO contacts (user_id, username, avatar_local_path, encryption_public_key,
-                                                             identity_signing_public_key, updated_at)
-                            SELECT ?, REPLACE(username, '#local', ''), avatar_local_path, encryption_public_key,
-                                   identity_signing_public_key, updated_at
-                            FROM contacts WHERE user_id = ?
-                            """)) {
+                    try (PreparedStatement copy = c.prepareStatement("INSERT OR REPLACE INTO contacts (user_id, username, avatar_local_path, encryption_public_key, "
+                            + "                                 identity_signing_public_key, updated_at) "
+                            + "SELECT ?, REPLACE(username, '#local', ''), avatar_local_path, encryption_public_key, "
+                            + "       identity_signing_public_key, updated_at "
+                            + "FROM contacts WHERE user_id = ? ")) {
                         copy.setLong(1, userId);
                         copy.setLong(2, LOCAL_USER_ID);
                         copy.executeUpdate();
@@ -92,7 +111,28 @@ public final class AccountDao extends BaseDao {
         });
     }
 
-    public record Avatar(byte[] image, Long fileId, String key) {
+    public static final class Avatar {
+        private final byte[] image;
+        private final Long fileId;
+        private final String key;
+
+        public Avatar(byte[] image, Long fileId, String key) {
+            this.image = image;
+            this.fileId = fileId;
+            this.key = key;
+        }
+
+        public byte[] getImage() {
+            return image;
+        }
+
+        public Long getFileId() {
+            return fileId;
+        }
+
+        public String getKey() {
+            return key;
+        }
     }
 
     public void saveAvatar(byte[] image, long fileId, String key) {

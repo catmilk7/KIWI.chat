@@ -69,33 +69,33 @@ public final class MessagingService {
         try {
             Dto.Conversation conversation;
             try {
-                conversation = api.conversation(message.conversationId());
+                conversation = api.conversation(message.getConversationId());
             } catch (ApiException e) {
                 if (e.status() == 403 || e.status() == 404) {
-                    conversations.delete(message.conversationId()); // we were removed, or it was deleted
+                    conversations.delete(message.getConversationId()); // we were removed, or it was deleted
                 }
                 throw e;
             }
             groups.store(conversation);
-            if ("DIRECT".equals(conversation.type())) {
+            if ("DIRECT".equals(conversation.getType())) {
                 transmitDirect(message, conversation);
                 return;
             }
-            long epoch = conversation.epoch();
+            long epoch = conversation.getEpoch();
             SecretKey key = ensureSenderKey(conversation, epoch);
 
-            Envelope envelope = crypto.sealGroup(key, message.type(), message.conversationId(), me, epoch,
-                    message.clientMsgId(), message.content());
-            Dto.SendResult result = api.sendMessage(message.conversationId(), envelope.ciphertext(), envelope.iv(),
-                    message.type().name(), message.clientMsgId(), epoch, null);
-            messages.markSent(message.clientMsgId(), result.messageId(), Instant.parse(result.createdAt()));
+            Envelope envelope = crypto.sealGroup(key, message.getType(), message.getConversationId(), me, epoch,
+                    message.getClientMsgId(), message.getContent());
+            Dto.SendResult result = api.sendMessage(message.getConversationId(), envelope.getCiphertext(), envelope.getIv(),
+                    message.getType().name(), message.getClientMsgId(), epoch, null);
+            messages.markSent(message.getClientMsgId(), result.getMessageId(), Instant.parse(result.getCreatedAt()));
         } catch (ApiException e) {
             if (!e.isNetworkError()) {
-                messages.markFailed(message.clientMsgId());
+                messages.markFailed(message.getClientMsgId());
             }
             throw e;
         } catch (RuntimeException e) {
-            messages.markFailed(message.clientMsgId());
+            messages.markFailed(message.getClientMsgId());
             throw new ApiException(500, "Could not send the message: " + e.getMessage());
         }
     }
@@ -103,16 +103,16 @@ public final class MessagingService {
     /** A direct message: sealed for the peer (and for us), no epoch and no sender key. */
     private void transmitDirect(Message message, Dto.Conversation conversation) throws ApiException {
         long peer = peerOf(conversation);
-        PublicKey peerKey = KeyCodec.decodePublic(keysOf(peer).encryptionPublicKey());
-        Envelope envelope = crypto.sealDirect(peerKey, message.type(), message.conversationId(), me,
-                message.clientMsgId(), myUsername, message.content());
-        Dto.SendResult result = api.sendMessage(message.conversationId(), envelope.ciphertext(), envelope.iv(),
-                message.type().name(), message.clientMsgId(), null, null);
-        messages.markSent(message.clientMsgId(), result.messageId(), Instant.parse(result.createdAt()));
+        PublicKey peerKey = KeyCodec.decodePublic(keysOf(peer).getEncryptionPublicKey());
+        Envelope envelope = crypto.sealDirect(peerKey, message.getType(), message.getConversationId(), me,
+                message.getClientMsgId(), myUsername, message.getContent());
+        Dto.SendResult result = api.sendMessage(message.getConversationId(), envelope.getCiphertext(), envelope.getIv(),
+                message.getType().name(), message.getClientMsgId(), null, null);
+        messages.markSent(message.getClientMsgId(), result.getMessageId(), Instant.parse(result.getCreatedAt()));
     }
 
     private long peerOf(Dto.Conversation conversation) throws ApiException {
-        for (long member : conversation.memberIds()) {
+        for (long member : conversation.getMemberIds()) {
             if (member != me) {
                 return member;
             }
@@ -136,7 +136,7 @@ public final class MessagingService {
         if (!name.isBlank() && !name.startsWith("user#")) { // "user#id" is only a placeholder, not a real name
             contacts.rename(peerId, name);
         }
-        return conversation.conversationId();
+        return conversation.getConversationId();
     }
 
     /** Sends everything still waiting (SENDING or FAILED), oldest first. Stops at the first network error. */
@@ -155,15 +155,15 @@ public final class MessagingService {
 
     /** Our sender key for this epoch; created and sent to every member the first time it is needed. */
     private SecretKey ensureSenderKey(Dto.Conversation conversation, long epoch) throws ApiException {
-        long id = conversation.conversationId();
+        long id = conversation.getConversationId();
         Optional<GroupKeyDao.Entry> entry = groupKeys.findEntry(id, me, epoch);
         if (entry.isEmpty()) {
             groupKeys.save(id, me, epoch, MessageCrypto.keyToBase64(crypto.newSenderKey()), false);
             entry = groupKeys.findEntry(id, me, epoch);
         }
-        String keyBase64 = entry.orElseThrow().keyBase64();
-        if (!entry.get().distributed()) {
-            for (long member : conversation.memberIds()) {
+        String keyBase64 = entry.orElseThrow().getKeyBase64();
+        if (!entry.get().isDistributed()) {
+            for (long member : conversation.getMemberIds()) {
                 if (member != me) {
                     sendPackage(id, epoch, member, keyBase64);
                 }
@@ -174,11 +174,11 @@ public final class MessagingService {
     }
 
     private void sendPackage(long conversationId, long epoch, long recipient, String keyBase64) throws ApiException {
-        PublicKey recipientKey = KeyCodec.decodePublic(keysOf(recipient).encryptionPublicKey());
+        PublicKey recipientKey = KeyCodec.decodePublic(keysOf(recipient).getEncryptionPublicKey());
         String clientMsgId = UUID.randomUUID().toString();
         Envelope envelope = crypto.sealPackage(recipientKey, conversationId, me, recipient, epoch, clientMsgId,
                 new SenderKeyPackage(keyBase64, myUsername, conversations.title(conversationId)));
-        api.sendMessage(conversationId, envelope.ciphertext(), envelope.iv(), MessageType.SENDER_KEY.name(),
+        api.sendMessage(conversationId, envelope.getCiphertext(), envelope.getIv(), MessageType.SENDER_KEY.name(),
                 clientMsgId, epoch, recipient);
     }
 
@@ -189,8 +189,8 @@ public final class MessagingService {
             return known;
         }
         Dto.KeyBundle bundle = api.keyBundle(userId);
-        contacts.saveKeys(userId, bundle.encryptionPublicKey(), bundle.identitySigningPublicKey());
-        return new ContactDao.Keys(bundle.encryptionPublicKey(), bundle.identitySigningPublicKey());
+        contacts.saveKeys(userId, bundle.getEncryptionPublicKey(), bundle.getIdentitySigningPublicKey());
+        return new ContactDao.Keys(bundle.getEncryptionPublicKey(), bundle.getIdentitySigningPublicKey());
     }
 
     // -------------------------------------------------------------- receiving
@@ -200,7 +200,7 @@ public final class MessagingService {
      * username and the group name) to everyone who does not have it for the current epoch.
      */
     public synchronized void refreshAndAnnounce() throws ApiException {
-        announce(groups.refreshConversations().conversations());
+        announce(groups.refreshConversations().getConversations());
     }
 
     /**
@@ -211,15 +211,15 @@ public final class MessagingService {
      */
     private void announce(Dto.Conversation[] all) throws ApiException {
         for (Dto.Conversation conversation : all) {
-            if ("GROUP".equals(conversation.type()) && conversation.memberIds().size() > 1) {
+            if ("GROUP".equals(conversation.getType()) && conversation.getMemberIds().size() > 1) {
                 try {
-                    ensureSenderKey(conversation, conversation.epoch());
+                    ensureSenderKey(conversation, conversation.getEpoch());
                 } catch (ApiException e) {
                     if (e.isNetworkError()) {
                         throw e;
                     }
                     System.err.println("[msg] could not announce our key in conversation "
-                            + conversation.conversationId() + ": " + e.getMessage());
+                            + conversation.getConversationId() + ": " + e.getMessage());
                 }
             }
         }
@@ -228,15 +228,15 @@ public final class MessagingService {
     /** Catches up with everything the server holds after our cursor (see GET /api/sync). */
     public synchronized boolean syncAll() throws ApiException {
         GroupService.Refresh refresh = groups.refreshConversations(); // groups we were removed from disappear here
-        boolean changed = refresh.removedAny();
-        announce(refresh.conversations());
+        boolean changed = refresh.isRemovedAny();
+        announce(refresh.getConversations());
         while (true) {
-            Dto.MessagePage page = api.sync(account.get().syncCursor(), SYNC_PAGE);
-            for (Dto.SyncMessage message : page.messages()) {
+            Dto.MessagePage page = api.sync(account.get().getSyncCursor(), SYNC_PAGE);
+            for (Dto.SyncMessage message : page.getMessages()) {
                 handleIncoming(message);
                 changed = true;
             }
-            if (!page.hasMore() || page.messages().isEmpty()) {
+            if (!page.hasMore() || page.getMessages().isEmpty()) {
                 return changed;
             }
         }
@@ -248,77 +248,77 @@ public final class MessagingService {
      * keys or conversations) propagate so the cursor stays put and the message is retried.
      */
     public synchronized void handleIncoming(Dto.SyncMessage message) throws ApiException {
-        if (!conversations.exists(message.conversationId())) {
+        if (!conversations.exists(message.getConversationId())) {
             groups.refreshConversations();
-            if (!conversations.exists(message.conversationId())) {
+            if (!conversations.exists(message.getConversationId())) {
                 return; // not ours (any more)
             }
         }
-        contacts.ensure(message.senderId()); // shown as "@user#id" until the sender's own package names them
-        MessageType type = MessageType.valueOf(message.type());
-        long epoch = message.epoch() == null ? 0 : message.epoch();
-        Envelope envelope = new Envelope(message.ciphertext(), message.iv());
+        contacts.ensure(message.getSenderId()); // shown as "@user#id" until the sender's own package names them
+        MessageType type = MessageType.valueOf(message.getType());
+        long epoch = message.getEpoch() == null ? 0 : message.getEpoch();
+        Envelope envelope = new Envelope(message.getCiphertext(), message.getIv());
 
         if (type == MessageType.SENDER_KEY) {
-            if (message.recipientId() != null && message.recipientId() == me) {
+            if (message.getRecipientId() != null && message.getRecipientId() == me) {
                 acceptSenderKey(message, epoch, envelope);
             }
-        } else if (conversations.isDirect(message.conversationId())) {
+        } else if (conversations.isDirect(message.getConversationId())) {
             String plaintext = decryptDirect(message, type, envelope);
-            messages.saveIncoming(message.messageId(), message.clientMsgId(), message.conversationId(),
-                    message.senderId(), type, plaintext, Instant.parse(message.createdAt()));
+            messages.saveIncoming(message.getMessageId(), message.getClientMsgId(), message.getConversationId(),
+                    message.getSenderId(), type, plaintext, Instant.parse(message.getCreatedAt()));
         } else {
             String plaintext = decrypt(message, type, epoch, envelope);
-            messages.saveIncoming(message.messageId(), message.clientMsgId(), message.conversationId(),
-                    message.senderId(), type, plaintext, Instant.parse(message.createdAt()));
+            messages.saveIncoming(message.getMessageId(), message.getClientMsgId(), message.getConversationId(),
+                    message.getSenderId(), type, plaintext, Instant.parse(message.getCreatedAt()));
         }
-        account.advanceCursor(message.messageId());
+        account.advanceCursor(message.getMessageId());
     }
 
     private void acceptSenderKey(Dto.SyncMessage m, long epoch, Envelope envelope) throws ApiException {
-        PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.senderId()).identitySigningPublicKey());
+        PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.getSenderId()).getIdentitySigningPublicKey());
         try {
-            SenderKeyPackage pkg = crypto.openPackage(encryptionPrivateKey, senderSigning, m.conversationId(),
-                    m.senderId(), me, epoch, m.clientMsgId(), envelope);
-            groupKeys.save(m.conversationId(), m.senderId(), epoch, pkg.key(), true);
-            if (pkg.username() != null && !pkg.username().isBlank()) {
-                contacts.rename(m.senderId(), pkg.username());
+            SenderKeyPackage pkg = crypto.openPackage(encryptionPrivateKey, senderSigning, m.getConversationId(),
+                    m.getSenderId(), me, epoch, m.getClientMsgId(), envelope);
+            groupKeys.save(m.getConversationId(), m.getSenderId(), epoch, pkg.getKey(), true);
+            if (pkg.getUsername() != null && !pkg.getUsername().isBlank()) {
+                contacts.rename(m.getSenderId(), pkg.getUsername());
             }
-            if (pkg.groupName() != null && !pkg.groupName().isBlank()) {
-                conversations.setTitleIfUnknown(m.conversationId(), pkg.groupName());
+            if (pkg.getGroupName() != null && !pkg.getGroupName().isBlank()) {
+                conversations.setTitleIfUnknown(m.getConversationId(), pkg.getGroupName());
             }
         } catch (CryptoException | IllegalArgumentException e) {
-            System.err.println("[msg] ignored an unreadable sender key from user " + m.senderId() + ": " + e.getMessage());
+            System.err.println("[msg] ignored an unreadable sender key from user " + m.getSenderId() + ": " + e.getMessage());
         }
     }
 
     private String decryptDirect(Dto.SyncMessage m, MessageType type, Envelope envelope) throws ApiException {
         try {
-            PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.senderId()).identitySigningPublicKey());
+            PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.getSenderId()).getIdentitySigningPublicKey());
             MessageCrypto.DirectPayload payload = crypto.openDirect(encryptionPrivateKey, senderSigning,
-                    m.senderId() == me, type, m.conversationId(), m.senderId(), m.clientMsgId(),
-                    new Envelope(m.ciphertext(), m.iv()));
-            if (m.senderId() != me && payload.sender() != null && !payload.sender().isBlank()) {
-                contacts.rename(m.senderId(), payload.sender()); // signed and sealed by the sender, so it can be trusted as much as the key
+                    m.getSenderId() == me, type, m.getConversationId(), m.getSenderId(), m.getClientMsgId(),
+                    new Envelope(m.getCiphertext(), m.getIv()));
+            if (m.getSenderId() != me && payload.getSender() != null && !payload.getSender().isBlank()) {
+                contacts.rename(m.getSenderId(), payload.getSender()); // signed and sealed by the sender, so it can be trusted as much as the key
             }
-            return payload.body();
+            return payload.getBody();
         } catch (CryptoException | IllegalArgumentException e) {
-            System.err.println("[msg] could not decrypt direct message " + m.messageId() + ": " + e.getMessage());
+            System.err.println("[msg] could not decrypt direct message " + m.getMessageId() + ": " + e.getMessage());
             return UNREADABLE;
         }
     }
 
     private String decrypt(Dto.SyncMessage m, MessageType type, long epoch, Envelope envelope) throws ApiException {
-        Optional<String> key = groupKeys.find(m.conversationId(), m.senderId(), epoch);
+        Optional<String> key = groupKeys.find(m.getConversationId(), m.getSenderId(), epoch);
         if (key.isEmpty()) {
             return UNREADABLE;
         }
         try {
-            PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.senderId()).identitySigningPublicKey());
-            return crypto.openGroup(MessageCrypto.keyFromBase64(key.get()), senderSigning, type, m.conversationId(),
-                    m.senderId(), epoch, m.clientMsgId(), envelope);
+            PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.getSenderId()).getIdentitySigningPublicKey());
+            return crypto.openGroup(MessageCrypto.keyFromBase64(key.get()), senderSigning, type, m.getConversationId(),
+                    m.getSenderId(), epoch, m.getClientMsgId(), envelope);
         } catch (CryptoException | IllegalArgumentException e) {
-            System.err.println("[msg] could not decrypt message " + m.messageId() + ": " + e.getMessage());
+            System.err.println("[msg] could not decrypt message " + m.getMessageId() + ": " + e.getMessage());
             return UNREADABLE;
         }
     }

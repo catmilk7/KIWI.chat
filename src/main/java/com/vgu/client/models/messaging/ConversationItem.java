@@ -13,7 +13,28 @@ import java.time.Instant;
 public abstract class ConversationItem {
 
     /** The newest message of a conversation, as the list needs it. */
-    public record LastMessage(MessageContent content, boolean mine, String senderUsername) {
+    public static final class LastMessage {
+        private final MessageContent content;
+        private final boolean mine;
+        private final String senderUsername;
+
+        public LastMessage(MessageContent content, boolean mine, String senderUsername) {
+            this.content = content;
+            this.mine = mine;
+            this.senderUsername = senderUsername;
+        }
+
+        public MessageContent getContent() {
+            return content;
+        }
+
+        public boolean isMine() {
+            return mine;
+        }
+
+        public String getSenderUsername() {
+            return senderUsername;
+        }
     }
 
     private final long id;
@@ -43,10 +64,10 @@ public abstract class ConversationItem {
     /** Creates the subclass that matches {@code type}. */
     public static ConversationItem of(ConversationType type, long id, String title, int unreadCount, Instant updatedAt,
                                       LastMessage last) {
-        return switch (type) {
-            case DIRECT -> new DirectConversationItem(id, title, unreadCount, updatedAt, last);
-            case GROUP -> new GroupConversationItem(id, title, unreadCount, updatedAt, last);
-        };
+        if (type == ConversationType.DIRECT) {
+            return new DirectConversationItem(id, title, unreadCount, updatedAt, last);
+        }
+        return new GroupConversationItem(id, title, unreadCount, updatedAt, last);
     }
 
     public long id() { return id; }
@@ -63,8 +84,8 @@ public abstract class ConversationItem {
         if (last == null) {
             return "No messages yet";
         }
-        String text = last.content().preview();
-        return last.mine() ? "You: " + text : previewOf(text, last.senderUsername());
+        String text = last.getContent().preview();
+        return last.isMine() ? "You: " + text : previewOf(text, last.getSenderUsername());
     }
 
     /** How somebody else's message reads in the list. Direct chats keep this default; groups name the sender. */

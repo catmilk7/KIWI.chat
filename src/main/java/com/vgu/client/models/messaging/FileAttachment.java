@@ -7,7 +7,35 @@ import com.google.gson.JsonSyntaxException;
  * What a FILE_KEY message says about its file: where the encrypted blob is on the server and the
  * key to open it. Stored as the message content; a secret, kept only in the encrypted database.
  */
-public record FileAttachment(long fileId, String key, String name, long size) {
+public final class FileAttachment {
+    private final long fileId;
+    private final String key;
+    private final String name;
+    private final long size;
+
+    public FileAttachment(long fileId, String key, String name, long size) {
+        this.fileId = fileId;
+        this.key = key;
+        this.name = name;
+        this.size = size;
+    }
+
+    public long getFileId() {
+        return fileId;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public long getSize() {
+        return size;
+    }
+
 
     private static final Gson GSON = new Gson();
 
@@ -24,7 +52,7 @@ public record FileAttachment(long fileId, String key, String name, long size) {
     public static FileAttachment fromJson(String json) {
         try {
             FileAttachment parsed = GSON.fromJson(json, FileAttachment.class);
-            return parsed != null && parsed.key() != null ? parsed : null;
+            return parsed != null && parsed.getKey() != null ? parsed : null;
         } catch (JsonSyntaxException e) {
             return null;
         }

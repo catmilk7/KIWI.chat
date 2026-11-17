@@ -16,7 +16,22 @@ import java.util.Base64;
 public final class FileService {
 
     /** What it takes to fetch and read a file again. Treat as a secret. */
-    public record FileRef(long fileId, String keyBase64) {
+    public static final class FileRef {
+        private final long fileId;
+        private final String keyBase64;
+
+        public FileRef(long fileId, String keyBase64) {
+            this.fileId = fileId;
+            this.keyBase64 = keyBase64;
+        }
+
+        public long getFileId() {
+            return fileId;
+        }
+
+        public String getKeyBase64() {
+            return keyBase64;
+        }
     }
 
     private static final int NONCE_BYTES = 12;
@@ -33,23 +48,23 @@ public final class FileService {
         SecretKey key = crypto.generateAesKey();
         Sealed sealed = crypto.encrypt(key, plaintext, null);
 
-        byte[] blob = new byte[sealed.iv().length + sealed.ciphertext().length];
-        System.arraycopy(sealed.iv(), 0, blob, 0, sealed.iv().length);
-        System.arraycopy(sealed.ciphertext(), 0, blob, sealed.iv().length, sealed.ciphertext().length);
+        byte[] blob = new byte[sealed.getIv().length + sealed.getCiphertext().length];
+        System.arraycopy(sealed.getIv(), 0, blob, 0, sealed.getIv().length);
+        System.arraycopy(sealed.getCiphertext(), 0, blob, sealed.getIv().length, sealed.getCiphertext().length);
 
         Dto.DeliveryToken token = api.mintUploadToken();
-        Dto.FileUpload uploaded = api.uploadFile(token.token(), blob);
-        return new FileRef(uploaded.fileId(), Base64.getEncoder().encodeToString(key.getEncoded()));
+        Dto.FileUpload uploaded = api.uploadFile(token.getToken(), blob);
+        return new FileRef(uploaded.getFileId(), Base64.getEncoder().encodeToString(key.getEncoded()));
     }
 
     public byte[] download(FileRef ref) throws ApiException {
-        byte[] blob = api.downloadFile(ref.fileId());
+        byte[] blob = api.downloadFile(ref.getFileId());
         if (blob.length <= NONCE_BYTES) {
             throw new ApiException(200, "The downloaded file is too short to be valid");
         }
         byte[] iv = java.util.Arrays.copyOfRange(blob, 0, NONCE_BYTES);
         byte[] ciphertext = java.util.Arrays.copyOfRange(blob, NONCE_BYTES, blob.length);
-        SecretKey key = new SecretKeySpec(Base64.getDecoder().decode(ref.keyBase64()), "AES");
+        SecretKey key = new SecretKeySpec(Base64.getDecoder().decode(ref.getKeyBase64()), "AES");
         return crypto.decrypt(key, new Sealed(iv, ciphertext), null);
     }
 }

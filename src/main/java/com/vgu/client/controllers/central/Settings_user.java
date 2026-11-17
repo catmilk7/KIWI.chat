@@ -29,8 +29,8 @@ public class Settings_user extends Handling {
     protected void onModalInitialized() {
         Session session = Session.current();
         if (usernameLabel != null) usernameLabel.setText(session.handle());
-        var avatar = session.account().avatar();
-        if (avatar != null) showAvatar(avatar.image());
+        AccountDao.Avatar avatar = session.account().avatar();
+        if (avatar != null) showAvatar(avatar.getImage());
         if (uuidLabel != null) {
             uuidLabel.setText(session.userId() == AccountDao.LOCAL_USER_ID
                     ? "Not registered on a server yet"
@@ -64,7 +64,7 @@ public class Settings_user extends Handling {
                     throw new IllegalArgumentException("That file is not a readable image.");
                 }
                 FileService.FileRef ref = session.files().upload(image);
-                session.account().saveAvatar(image, ref.fileId(), ref.keyBase64());
+                session.account().saveAvatar(image, ref.getFileId(), ref.getKeyBase64());
                 return image;
             }
         };

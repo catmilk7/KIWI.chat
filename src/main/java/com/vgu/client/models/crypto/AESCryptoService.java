@@ -59,11 +59,11 @@ public final class AESCryptoService implements CryptoService {
     public byte[] decrypt(SecretKey key, Sealed sealed, byte[] aad) {
         try {
             Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, sealed.iv()));
+            cipher.init(Cipher.DECRYPT_MODE, key, new GCMParameterSpec(TAG_BITS, sealed.getIv()));
             if (aad != null && aad.length > 0) {
                 cipher.updateAAD(aad);
             }
-            return cipher.doFinal(sealed.ciphertext());
+            return cipher.doFinal(sealed.getCiphertext());
         } catch (GeneralSecurityException e) {
             throw new CryptoException("Decryption failed (wrong key or tampered data)", e);
         }
