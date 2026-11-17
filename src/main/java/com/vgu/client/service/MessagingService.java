@@ -133,6 +133,7 @@ public final class MessagingService {
             throw new ApiException(400, "You cannot start a chat with yourself.");
         }
         Dto.Conversation conversation = api.createDirect(peerId);
+        conversations.clearDirectRemoved(peerId); // chatting again brings back a contact that was removed
         keysOf(peerId); // learn the peer's public keys now, so sending later needs no extra request
         groups.store(conversation);
         String name = knownUsername == null ? "" : knownUsername.startsWith("@") ? knownUsername.substring(1) : knownUsername;
@@ -140,6 +141,33 @@ public final class MessagingService {
             contacts.rename(peerId, name);
         }
         return conversation.getConversationId();
+    }
+
+    /**
+     * Looks a person up by their exact username. Nothing is stored: they become a contact only once a
+     * chat with them is opened (see {@link #startDirect}).
+     */
+    public Dto.UserSummary findUser(String username) throws ApiException {
+        String name = username == null ? "" : username.trim();
+        if (name.startsWith("@")) {
+            name = name.substring(1);
+        }
+        if (name.isEmpty()) {
+            throw new ApiException(400, "Type a username to search.");
+        }
+        Dto.UserSummary found = api.searchUser(name);
+        if (found == null || found.getUsername() == null) {
+            throw new ApiException(404, "No user with the username @" + name + ".");
+        }
+        return found;
+    }
+
+    /**
+     * "Remove user": deletes the direct chat and its messages from this device and drops the contact.
+     * Local only; the chat comes back if the person writes again or we open it again.
+     */
+    public synchronized boolean removeDirect(long conversationId) {
+        return conversations.removeDirect(conversationId);
     }
 
     /** Sends everything still waiting (SENDING or FAILED), oldest first. Stops at the first network error. */
@@ -306,6 +334,9 @@ public final class MessagingService {
      */
     public synchronized void handleIncoming(Dto.SyncMessage message) throws ApiException {
         if (!conversations.exists(message.getConversationId())) {
+            if (message.getSenderId() != me) {
+                conversations.clearDirectRemoved(message.getSenderId()); // they wrote to us: the chat is wanted again
+            }
             groups.refreshConversations();
             if (!conversations.exists(message.getConversationId())) {
                 return; // not ours (any more)

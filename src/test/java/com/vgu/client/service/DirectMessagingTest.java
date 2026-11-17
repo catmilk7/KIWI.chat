@@ -76,6 +76,26 @@ class DirectMessagingTest {
     }
 
     @Test
+    void removingAContactDeletesTheChatLocallyAndASyncDoesNotBringItBack() throws Exception {
+        long chat = alice.messaging().startDirect(bob.userId(), "bobby");
+        say(alice, chat, "hello");
+
+        assertEquals(true, alice.messaging().removeDirect(chat));
+        assertFalse(alice.conversations().exists(chat));
+        assertEquals(0, alice.messages().list(chat).size());
+        assertNull(alice.contacts().keys(bob.userId())); // the contact row is gone too
+
+        alice.messaging().syncAll(); // the server still has the chat, but it must stay removed
+        assertFalse(alice.conversations().exists(chat));
+
+        assertEquals(chat, bob.messaging().startDirect(alice.userId(), "alice"));
+        say(bob, chat, "hey alice, are you there?"); // when the other person writes, the chat is wanted again
+        alice.messaging().syncAll();
+        assertEquals(true, alice.conversations().exists(chat));
+        assertEquals(1, alice.messages().list(chat).size());
+    }
+
+    @Test
     void aDirectMessageTravelsEncryptedBothWaysAndNothingIsReadableOnTheServer() throws Exception {
         long chat = alice.messaging().startDirect(bob.userId(), "bobby");
         say(alice, chat, "hello bobby, the secret is 42");

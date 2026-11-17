@@ -59,6 +59,14 @@ public final class ServerApi {
         }
     }
 
+    // ---- users ----
+
+    /** Finds a user by their exact username (404 when there is none). */
+    public Dto.UserSummary searchUser(String username) throws ApiException {
+        String encoded = java.net.URLEncoder.encode(username, java.nio.charset.StandardCharsets.UTF_8);
+        return client.json("GET", "/api/users/search?username=" + encoded, null, Dto.UserSummary.class);
+    }
+
     // ---- keys ----
 
     public Dto.KeyBundle keyBundle(long userId) throws ApiException {

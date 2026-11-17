@@ -199,10 +199,25 @@ public final class GroupService {
         Dto.Conversation[] all = api.conversations();
         java.util.Set<Long> ids = new java.util.HashSet<>();
         for (Dto.Conversation conversation : all) {
+            if (isRemovedDirect(conversation)) {
+                continue; // the user removed this contact; it stays gone until they or the peer start talking again
+            }
             saveRemote(conversation);
             ids.add(conversation.getConversationId());
         }
         return new Refresh(conversations.deleteAllExcept(ids) > 0, all);
+    }
+
+    private boolean isRemovedDirect(Dto.Conversation conversation) {
+        if (!"DIRECT".equals(conversation.getType())) {
+            return false;
+        }
+        for (long member : conversation.getMemberIds()) {
+            if (member != me && conversations.isDirectRemoved(member)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** What a refresh found: whether some conversation was removed, and the server's current list. */

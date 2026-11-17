@@ -23,7 +23,7 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 public final class ChatDatabase implements AutoCloseable {
 
-    public static final int SCHEMA_VERSION = 4;
+    public static final int SCHEMA_VERSION = 5;
     public static final int KEY_BYTES = 32;
     private static final String SCHEMA_RESOURCE = "/com/vgu/client/db/schema.sql";
 
@@ -117,6 +117,9 @@ public final class ChatDatabase implements AutoCloseable {
             addColumnIfMissing(st, "contacts", "avatar_image", "BLOB");
             addColumnIfMissing(st, "contacts", "avatar_file_id", "INTEGER");
             addColumnIfMissing(st, "contacts", "avatar_key", "TEXT");
+        }
+        if (from < 5) {
+            st.execute("CREATE TABLE IF NOT EXISTS removed_direct (user_id INTEGER PRIMARY KEY)");
         }
     }
 

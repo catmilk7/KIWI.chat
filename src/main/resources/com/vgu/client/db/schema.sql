@@ -42,6 +42,12 @@ CREATE TABLE conversations (
     UNIQUE (direct_user_low, direct_user_high)
 );
 
+-- Direct chats the user removed from their contacts. The server still has them, so without this
+-- note the next sync would bring them back. Cleared when the user starts the chat again or the peer writes.
+CREATE TABLE removed_direct (
+    user_id INTEGER PRIMARY KEY
+);
+
 CREATE TABLE conversation_members (
     conversation_id INTEGER NOT NULL,
     user_id         INTEGER NOT NULL,

@@ -17,6 +17,7 @@ import com.vgu.client.model.Message;
 import com.vgu.client.enums.MessageType;
 import com.vgu.client.model.FileAttachment;
 import com.vgu.client.network.ApiException;
+import com.vgu.client.network.Dto;
 import com.vgu.client.service.FileService;
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -105,6 +106,9 @@ public class Chat {
 
     private final Session session = Session.current();
     private ConversationItem activeConversation;
+    // Result of the last username search (shown at the top of the list); at most one of the two is set.
+    private Dto.UserSummary searchHit;
+    private String searchMiss;
     private final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a");
 
     @FXML
@@ -128,7 +132,12 @@ public class Chat {
 
         if (searchField != null) {
             searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+                searchHit = null; // a result belongs to the text it was searched with
+                searchMiss = null;
                 renderContactList(session.conversations().list(newVal));
+            });
+            searchField.setOnKeyPressed(event -> {
+                if (event.getCode() == KeyCode.ENTER) handleSearchUser();
             });
         }
 
@@ -215,10 +224,95 @@ public class Chat {
             contactListContainer.getChildren().add(createGroupBtn);
         }
 
+        if (searchHit != null) {
+            contactListContainer.getChildren().add(buildSearchHitRow(searchHit));
+        } else if (searchMiss != null) {
+            Label miss = new Label(searchMiss);
+            miss.setWrapText(true);
+            miss.setStyle("-fx-text-fill: #64748b; -fx-font-size: 12px; -fx-padding: 4 8;");
+            contactListContainer.getChildren().add(miss);
+        }
+
         for (ConversationItem conv : conversations) {
             HBox row = buildContactRow(conv);
             contactListContainer.getChildren().add(row);
         }
+    }
+
+    /** A user the server found by exact username. Clicking opens the chat, which is what makes them a contact. */
+    private HBox buildSearchHitRow(Dto.UserSummary user) {
+        HBox row = new HBox(12.0);
+        row.setAlignment(Pos.CENTER_LEFT);
+        row.setPrefHeight(60.0);
+        row.setStyle("-fx-cursor: hand; -fx-padding: 5; -fx-background-radius: 8; -fx-border-color: -color-accent-emphasis; -fx-border-radius: 8;");
+
+        ImageView avatar = createCircularAvatar("/com/vgu/client/ui/assets/default/anon_sender.png", 45.0);
+        avatar.setSmooth(true);
+        Label name = new Label("@" + user.getUsername());
+        name.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
+        Label hint = new Label("You haven't chatted with this user yet. Click to say hi and get to know them.");
+        hint.setWrapText(true);
+        hint.setTextFill(Color.GRAY);
+        hint.setStyle("-fx-font-size: 12px;");
+        VBox textCol = new VBox(2.0, name, hint);
+        textCol.setAlignment(Pos.CENTER_LEFT);
+
+        row.getChildren().addAll(avatar, textCol);
+        row.setOnMouseClicked(e -> {
+            if (e.getButton() == MouseButton.PRIMARY) openDirect(user.getUserId(), user.getUsername());
+        });
+        return row;
+    }
+
+    /** Searches the server for the exact username in the search box (Enter or the magnifier button). */
+    @FXML
+    private void handleSearchUser() {
+        if (searchField == null) return;
+        String typed = searchField.getText() == null ? "" : searchField.getText().trim();
+        if (typed.isEmpty()) return;
+        String wanted = typed.startsWith("@") ? typed.substring(1) : typed;
+
+        // Somebody we already chat with is opened straight from the local database: no server call, no duplicate row.
+        for (ConversationItem item : session.conversations().list("")) {
+            if (!item.isGroup() && item.title().equalsIgnoreCase("@" + wanted)) {
+                searchField.clear(); // its listener redraws the full list
+                selectConversation(item);
+                return;
+            }
+        }
+
+        if (!session.online()) {
+            showErrorModal("You are offline", "Log in again once the server is reachable.");
+            return;
+        }
+        Task<Dto.UserSummary> task = new Task<>() {
+            @Override protected Dto.UserSummary call() throws Exception {
+                return session.messaging().findUser(wanted);
+            }
+        };
+        task.setOnSucceeded(e -> {
+            if (!typed.equals(searchField.getText().trim())) return; // the text changed meanwhile
+            Dto.UserSummary found = task.getValue();
+            if (found.getUserId() == session.userId()) {
+                searchHit = null;
+                searchMiss = "That is your own account.";
+            } else {
+                searchHit = found;
+                searchMiss = null;
+            }
+            renderContactList(session.conversations().list(searchField.getText()));
+        });
+        task.setOnFailed(e -> {
+            Throwable error = task.getException();
+            if (error instanceof ApiException api && api.status() == 404) {
+                searchHit = null;
+                searchMiss = "No user with the exact username @" + wanted + ".";
+                renderContactList(session.conversations().list(searchField.getText()));
+            } else {
+                showErrorModal("Search failed", describe(error));
+            }
+        });
+        startBackground(task, "search-user");
     }
 
     private HBox buildContactRow(ConversationItem conv) {
@@ -706,6 +800,11 @@ public class Chat {
         String username = profileUsername;
         hideAllFloatingMenus();
         if (peer == 0) return;
+        openDirect(peer, username);
+    }
+
+    /** Opens (creating and keeping, if new) the direct chat with {@code peer} and shows it. */
+    private void openDirect(long peer, String username) {
         if (!session.online()) {
             showErrorModal("You are offline", "Log in again once the server is reachable.");
             return;
@@ -717,6 +816,11 @@ public class Chat {
         };
         task.setOnSucceeded(e -> {
             long id = task.getValue();
+            searchHit = null;
+            searchMiss = null;
+            if (searchField != null && !searchField.getText().isEmpty()) {
+                searchField.clear(); // its listener redraws the full list
+            }
             List<ConversationItem> all = session.conversations().list("");
             renderContactList(all);
             for (ConversationItem item : all) {
@@ -785,6 +889,21 @@ public class Chat {
         } else {
             toggleMenuVisibility(usersMenu);
         }
+    }
+
+    /** "Remove user" in the "..." menu of a direct chat: deletes the chat from this device and the contact, after a confirmation. */
+    @FXML
+    private void handleRemoveUser() {
+        hideAllFloatingMenus();
+        if (activeConversation == null || activeConversation.isGroup()) return;
+        long id = activeConversation.id();
+        showConfirmModal("Remove " + activeConversation.title() + "?",
+                "The chat and all its messages are deleted from this device and the person is removed from your contacts. "
+                        + "You can find them again by searching their username.",
+                () -> {
+                    session.messaging().removeDirect(id);
+                    refreshFromDatabase();
+                });
     }
 
     /** The "..." menu: leave the open group (or delete it, for its owner), after a confirmation. */

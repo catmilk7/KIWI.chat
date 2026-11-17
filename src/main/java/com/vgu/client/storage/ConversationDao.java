@@ -203,6 +203,59 @@ public final class ConversationDao extends BaseDao {
         db.checkpoint();
     }
 
+    /**
+     * "Remove user": forgets the direct chat with its messages and the contact, and remembers that the
+     * person was removed so a sync does not bring the chat back. Returns false if it is not a direct chat here.
+     */
+    public boolean removeDirect(long conversationId) {
+        boolean removed = db.write(conn -> {
+            long peer = 0;
+            try (PreparedStatement ps = conn.prepareStatement("SELECT direct_user_low, direct_user_high FROM conversations "
+                    + "WHERE conversation_id = ? AND type = 'DIRECT'")) {
+                ps.setLong(1, conversationId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    if (!rs.next()) {
+                        return false;
+                    }
+                    peer = rs.getLong(1) == me ? rs.getLong(2) : rs.getLong(1);
+                }
+            }
+            try (PreparedStatement ps = conn.prepareStatement("INSERT OR IGNORE INTO removed_direct (user_id) VALUES (?)")) {
+                ps.setLong(1, peer);
+                ps.executeUpdate();
+            }
+            forget(conn, conversationId);
+            pruneOrphanContacts(conn);
+            return true;
+        });
+        if (removed) {
+            db.checkpoint();
+        }
+        return removed;
+    }
+
+    /** True when the user removed this person's direct chat and it has not been started again since. */
+    public boolean isDirectRemoved(long peerId) {
+        return db.read(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("SELECT 1 FROM removed_direct WHERE user_id = ?")) {
+                ps.setLong(1, peerId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        });
+    }
+
+    public void clearDirectRemoved(long peerId) {
+        db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("DELETE FROM removed_direct WHERE user_id = ?")) {
+                ps.setLong(1, peerId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
     private static void forget(java.sql.Connection conn, long conversationId) throws java.sql.SQLException {
         try (PreparedStatement ps = conn.prepareStatement("DELETE FROM conversations WHERE conversation_id = ?")) {
             ps.setLong(1, conversationId);

@@ -44,6 +44,26 @@ public final class Dto {
         }
     }
 
+    /** A user found by GET /api/users/search: who they are, nothing else. */
+    public static final class UserSummary {
+        @com.google.gson.annotations.SerializedName(value = "userId", alternate = {"id"})
+        private final long userId;
+        private final String username;
+
+        public UserSummary(long userId, String username) {
+            this.userId = userId;
+            this.username = username;
+        }
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public String getUsername() {
+            return username;
+        }
+    }
+
     public static final class KeyBundle {
         private final long userId;
         private final String encryptionPublicKey;
