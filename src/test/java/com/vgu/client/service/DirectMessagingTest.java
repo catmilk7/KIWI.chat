@@ -19,6 +19,8 @@ import org.junit.jupiter.api.io.TempDir;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -56,6 +58,21 @@ class DirectMessagingTest {
         Message message = who.messages().insertOutgoing(conversation, MessageType.TEXT, text);
         who.messaging().transmit(message);
         return message;
+    }
+
+    @Test
+    void theOtherPersonGetsOurAvatarWithOurNextDirectMessage() throws Exception {
+        byte[] avatar = AvatarImage.shrink(AvatarImageTest.image(640, 480, java.awt.image.BufferedImage.TYPE_INT_RGB, "png"));
+        FileService.FileRef ref = alice.files().upload(avatar);
+        alice.account().saveAvatar(avatar, ref.getFileId(), ref.getKeyBase64());
+
+        long chat = alice.messaging().startDirect(bob.userId(), "bobby");
+        say(alice, chat, "hello with my picture");
+        bob.messaging().syncAll();
+
+        assertArrayEquals(avatar, bob.contacts().avatarImage(alice.userId()));
+        assertArrayEquals(avatar, bob.conversations().list("").get(0).getAvatarImage()); // the chat list shows it too
+        assertNull(alice.conversations().list("").get(0).getAvatarImage()); // bobby has none, so alice sees the default
     }
 
     @Test

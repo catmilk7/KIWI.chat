@@ -43,6 +43,7 @@ public final class Session implements AutoCloseable {
     private final ContactDao contacts;
     private final GroupService groups;
     private final FileService files;
+    private final GroupKeyDao groupKeys;
     private final MessagingService messaging;
     private final RealtimeClient realtime;
     private final ServerEvent.Sink eventSink;
@@ -72,11 +73,11 @@ public final class Session implements AutoCloseable {
         this.conversations = new ConversationDao(database, userId);
         this.messages = new MessageDao(database, userId);
         this.contacts = new ContactDao(database);
-        this.groups = new GroupService(api, crypto, conversations, contacts, new GroupKeyDao(database), userId, username);
+        this.groupKeys = new GroupKeyDao(database);
+        this.groups = new GroupService(api, crypto, conversations, contacts, groupKeys, userId, username);
         this.files = new FileService(api, crypto);
-        GroupKeyDao groupKeys = new GroupKeyDao(database);
         this.messaging = new MessagingService(api, new MessageCrypto(crypto, signatures, identity), groups, account,
-                conversations, messages, contacts, groupKeys, identity.getEncryption().getPrivate(), userId, username);
+                conversations, messages, contacts, groupKeys, files, identity.getEncryption().getPrivate(), userId, username);
         this.eventSink = new ServerEvent.Sink() {
             @Override public void messageArrived(Dto.SyncMessage message) {
                 submit(() -> messaging.handleIncoming(message));
@@ -162,6 +163,18 @@ public final class Session implements AutoCloseable {
     private void transmitLater(Message message) {
         if (online) {
             submit(() -> messaging.transmit(message));
+        }
+    }
+
+    /**
+     * Our avatar changed. It travels inside the sender key packages and direct messages, so mark our keys as
+     * not yet handed out: the next announce sends every member the same key again, now with the new picture.
+     * (In a direct chat the other person gets it with our next message.)
+     */
+    public void avatarChanged() {
+        groupKeys.markAllUndistributed(userId);
+        if (online) {
+            submit(messaging::refreshAndAnnounce);
         }
     }
 

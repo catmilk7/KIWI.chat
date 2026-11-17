@@ -80,6 +80,9 @@ public class Settings_group extends Handling {
         }
 
         showInviteState();
+        if (groupNameField != null && targetGroup != null) {
+            groupNameField.setEditable(isOwner()); // only the owner can rename
+        }
     }
 
     private boolean isOwner() {
@@ -169,7 +172,7 @@ public class Settings_group extends Handling {
         row.setPrefHeight(48.0);
         row.setStyle("-fx-padding: 6 12; -fx-background-color: -color-bg-default; -fx-background-radius: 8; -fx-border-color: #f1f5f9; -fx-border-radius: 8;");
 
-        ImageView avatar = createAvatar(36.0);
+        ImageView avatar = createAvatar(user.getAvatarImage(), 36.0);
         Label nameLabel = new Label(user.handle());
         nameLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 14px;");
 
@@ -191,6 +194,17 @@ public class Settings_group extends Handling {
             row.getChildren().add(actionBtn);
         }
         return row;
+    }
+
+    private ImageView createAvatar(byte[] picture, double size) {
+        ImageView imageView = createAvatar(size);
+        if (picture != null) {
+            Image image = new Image(new java.io.ByteArrayInputStream(picture));
+            if (!image.isError()) {
+                imageView.setImage(image);
+            }
+        }
+        return imageView;
     }
 
     private ImageView createAvatar(double size) {
@@ -302,12 +316,21 @@ public class Settings_group extends Handling {
 
     @FXML
     private void handleSaveChanges() {
-        if (targetGroup != null && groupNameField != null) {
-            String newName = groupNameField.getText().trim();
-            if (!newName.isEmpty()) {
-                System.out.println("Updated group name to: " + newName);
-            }
+        if (targetGroup == null || groupNameField == null) {
+            handleClose();
+            return;
         }
-        handleClose();
+        String newName = groupNameField.getText().trim();
+        if (newName.equals(targetGroup.title())) {
+            handleClose(); // nothing changed
+        } else if (newName.isEmpty()) {
+            showError("Group name required", "A group needs a name.");
+        } else {
+            long id = targetGroup.id();
+            runOnServer(() -> {
+                Session.current().groups().rename(id, newName);
+                return id;
+            }, done -> handleClose());
+        }
     }
 }

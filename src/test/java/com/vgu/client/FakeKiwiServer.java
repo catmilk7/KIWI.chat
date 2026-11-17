@@ -183,6 +183,13 @@ public final class FakeKiwiServer implements AutoCloseable {
                     historyFloors.put(id + ":" + caller, messageIds.get() - 1); // new members never see older messages
                 }
                 ok(ex, 200, conversation(id, "GROUP", members, members.get(0) == caller ? "OWNER" : "MEMBER", groupEpochs.get(id)));
+            } else if (path.matches("/api/conversations/\\d+/meta") && method.equals("PUT")) {
+                long id = Long.parseLong(path.split("/")[3]);
+                List<Long> members = groupMembers.get(id);
+                if (members == null || !members.contains(callerId(auth))) { fail(ex, 403, "Not a member"); return; }
+                if (members.get(0) != callerId(auth)) { fail(ex, 403, "Owner only"); return; }
+                groupMeta.put(id, gson.fromJson(text, JsonObject.class).get("encryptedMeta").getAsString());
+                ok(ex, 200, conversation(id, "GROUP", members, "OWNER", groupEpochs.get(id)));
             } else if (path.matches("/api/conversations/\\d+/leave") && method.equals("POST")) {
                 long id = Long.parseLong(path.split("/")[3]);
                 long caller = callerId(auth);
@@ -324,7 +331,7 @@ public final class FakeKiwiServer implements AutoCloseable {
         Map<String, Object> data = new HashMap<>();
         data.put("conversationId", id);
         data.put("type", type);
-        data.put("encryptedMeta", "opaque");
+        data.put("encryptedMeta", groupMeta.getOrDefault(id, "opaque"));
         data.put("createdAt", "2026-11-02T03:52:13Z");
         data.put("memberIds", members);
         data.put("myRole", role);

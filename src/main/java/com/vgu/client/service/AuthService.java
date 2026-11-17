@@ -11,6 +11,7 @@ import com.vgu.client.network.ApiException;
 import com.vgu.client.network.Dto;
 import com.vgu.client.network.ServerApi;
 import com.vgu.client.storage.AccountDao;
+import com.vgu.client.storage.AccountPassword;
 import com.vgu.client.storage.ChatDatabase;
 import com.vgu.client.storage.DatabaseException;
 import com.vgu.client.storage.KeyStoreException;
@@ -79,7 +80,7 @@ public class AuthService {
     }
 
     public static boolean isValidPassword(char[] password) {
-        int bytes = new String(password).getBytes(StandardCharsets.UTF_8).length;
+        int bytes = AccountPassword.normalized(password).getBytes(StandardCharsets.UTF_8).length;
         return bytes >= MIN_PASSWORD_BYTES && bytes <= MAX_PASSWORD_BYTES;
     }
 
@@ -96,9 +97,10 @@ public class AuthService {
     }
 
     /**
-     * Registers on the server with the new public keys, then creates the local keystore
-     * (identity keys + a random database key) and the encrypted chat database for the
-     * server-assigned user id. Slow: generates RSA keys.
+     * Creates the local keystore (identity keys + a random database key) first, then registers on the server
+     * with the new public keys, then creates the encrypted chat database for the server-assigned user id.
+     * Local keys come first on purpose: if they cannot be made, nothing has reached the server, so there is
+     * never an account on the server whose keys do not exist. Slow: generates RSA keys.
      */
     public IdentityKeyPair register(String username, char[] password) throws AuthException {
         String problem = registrationProblem(username, password);
@@ -110,31 +112,34 @@ public class AuthService {
             store.close();
             throw new AuthException("This username is already registered on this device.");
         }
+        byte[] dbKey = new byte[ChatDatabase.KEY_BYTES];
         try {
             IdentityKeyPair identity = IdentityKeyPair.generate(crypto, signatures);
+            store.create();
+            identity.saveTo(store);
+            new SecureRandom().nextBytes(dbKey);
+            store.storeKey(DB_KEY_ALIAS, dbKey);
 
             Dto.Auth auth;
             try {
-                auth = api.register(username, new String(password), identity.encryptionPublicKeyBase64(),
+                auth = api.register(username, AccountPassword.normalized(password), identity.encryptionPublicKeyBase64(),
                         identity.signingPublicKeyBase64());
             } catch (ApiException e) {
+                discardLocalData(username); // the server refused (name taken, no connection...): leave nothing behind
                 throw serverProblem(e, "Could not register: ");
             }
 
-            store.create();
-            identity.saveTo(store);
-            byte[] dbKey = new byte[ChatDatabase.KEY_BYTES];
-            new SecureRandom().nextBytes(dbKey);
-            store.storeKey(DB_KEY_ALIAS, dbKey);
             try (ChatDatabase db = ChatDatabase.open(databaseFile(username), dbKey)) {
                 new AccountDao(db).create(username, auth.getUserId());
-            } finally {
-                Arrays.fill(dbKey, (byte) 0);
+            } catch (DatabaseException e) {
+                throw new AuthException("Registered on the server, but could not create the local database: " + e.getMessage());
             }
             return identity;
-        } catch (KeyStoreException | CryptoException | DatabaseException e) {
-            throw new AuthException("Registered on the server, but could not create local data: " + e.getMessage());
+        } catch (KeyStoreException | CryptoException e) {
+            discardLocalData(username);
+            throw new AuthException("Could not create your keys on this device: " + e.getMessage());
         } finally {
+            Arrays.fill(dbKey, (byte) 0);
             store.close();
         }
     }
@@ -147,7 +152,10 @@ public class AuthService {
         Pkcs12KeyStore store = keyStoreFor(username, password);
         try {
             if (!store.exists()) {
-                throw badCredentials();
+                // Not a password problem. The private keys never leave the device that registered the account.
+                throw new AuthException("This device has no keys for @" + username + ". An account's keys stay on the "
+                        + "device that registered it: log in there, or copy that device's folder "
+                        + baseDir.resolve(username) + " to this one.");
             }
             store.verifyPassword();
             IdentityKeyPair identity = IdentityKeyPair.loadFrom(store)
@@ -181,7 +189,7 @@ public class AuthService {
         long userId = account.getUserId();
         boolean online = false;
         try {
-            Dto.Auth auth = api.login(username, new String(password));
+            Dto.Auth auth = api.login(username, AccountPassword.normalized(password));
             if (userId != AccountDao.LOCAL_USER_ID && userId != auth.getUserId()) {
                 throw new AuthException("This device's data belongs to a different server account.");
             }
@@ -212,6 +220,19 @@ public class AuthService {
         return new AuthException(prefix + e.getMessage());
     }
 
+    /** Removes whatever a failed registration created on this device (keystore, database files, the folder). */
+    private void discardLocalData(String username) {
+        Path folder = baseDir.resolve(username);
+        try {
+            for (String name : new String[]{KEYSTORE_NAME, DATABASE_NAME, DATABASE_NAME + "-wal", DATABASE_NAME + "-shm"}) {
+                java.nio.file.Files.deleteIfExists(folder.resolve(name));
+            }
+            java.nio.file.Files.deleteIfExists(folder); // only succeeds when empty
+        } catch (java.io.IOException ignored) {
+            // best effort: a leftover folder only blocks registering the same name again on this device
+        }
+    }
+
     private Path databaseFile(String username) {
         return baseDir.resolve(username).resolve(DATABASE_NAME);
     }
@@ -220,7 +241,8 @@ public class AuthService {
         if (username == null || !USERNAME.matcher(username).matches()) {
             throw new AuthException("Username contains illegal characters.");
         }
-        return new Pkcs12KeyStore(baseDir.resolve(username).resolve(KEYSTORE_NAME), password);
+        return new Pkcs12KeyStore(baseDir.resolve(username).resolve(KEYSTORE_NAME),
+                AccountPassword.forKeystore(password, username));
     }
 
     // Same message for unknown user and wrong password, so it does not reveal which usernames exist.

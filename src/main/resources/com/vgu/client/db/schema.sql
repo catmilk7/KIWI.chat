@@ -16,6 +16,9 @@ CREATE TABLE contacts (
     user_id                     INTEGER PRIMARY KEY,
     username                    TEXT NOT NULL UNIQUE,
     avatar_local_path           TEXT,
+    avatar_image                BLOB,                -- their avatar, downloaded and decrypted (the whole file is encrypted)
+    avatar_file_id              INTEGER,             -- where the encrypted copy is on the server
+    avatar_key                  TEXT,                -- its AES key, Base64, handed to us by the contact
     encryption_public_key       TEXT,
     identity_signing_public_key TEXT,
     updated_at                  TEXT NOT NULL

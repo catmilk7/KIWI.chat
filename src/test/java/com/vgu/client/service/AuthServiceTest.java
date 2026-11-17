@@ -79,11 +79,71 @@ class AuthServiceTest {
     }
 
     @Test
-    void wrongPasswordAndUnknownUserGiveTheSameError() throws Exception {
+    void aWrongPasswordIsReportedAsSuch() throws Exception {
         service().register("carol", "right-password".toCharArray());
         AuthException wrong = assertThrows(AuthException.class, () -> service().login("carol", "wrong-password".toCharArray()));
-        AuthException unknown = assertThrows(AuthException.class, () -> service().login("nobody", "whatever1".toCharArray()));
-        assertEquals(wrong.getMessage(), unknown.getMessage());
+        assertEquals("Wrong username or password.", wrong.getMessage());
+    }
+
+    @Test
+    void anAccountRegisteredOnAnotherDeviceSaysSoInsteadOfBlamingThePassword() throws Exception {
+        service().register("dora", "password1".toCharArray());
+        Path otherDevice = dir.resolve("other-device");
+        AuthService there = new AuthService(otherDevice, new AESCryptoService(), new RsaPssSignatureService(),
+                new ServerApi(new ApiClient(server.url())));
+
+        AuthException e = assertThrows(AuthException.class, () -> there.login("dora", "password1".toCharArray()));
+        assertTrue(e.getMessage().startsWith("This device has no keys for @dora"), e.getMessage());
+        assertTrue(e.getMessage().contains("dora"));
+    }
+
+    @Test
+    void copyingAnAccountFolderToAnotherDeviceMakesItUsableThere() throws Exception {
+        service().register("emil", "password1".toCharArray());
+        Path otherDevice = dir.resolve("copy-target");
+        java.nio.file.Files.createDirectories(otherDevice.resolve("emil"));
+        for (String file : new String[]{"keystore.p12", "chat.db"}) {
+            java.nio.file.Files.copy(dir.resolve("emil").resolve(file), otherDevice.resolve("emil").resolve(file));
+        }
+        AuthService there = new AuthService(otherDevice, new AESCryptoService(), new RsaPssSignatureService(),
+                new ServerApi(new ApiClient(server.url())));
+
+        try (Session session = there.login("emil", "password1".toCharArray())) {
+            assertEquals("@emil", session.handle());
+            assertTrue(session.online());
+        }
+    }
+
+    @Test
+    void passwordsWithAccentedLettersWork() throws Exception {
+        String password = "m\u1eadt kh\u1ea9u 123"; // "mật khẩu 123", which Java's PKCS#12 keystore cannot take as it is
+        service().register("viet", password.toCharArray());
+
+        try (Session session = service().login("viet", password.toCharArray())) {
+            assertEquals("@viet", session.handle());
+        }
+    }
+
+    @Test
+    void theSamePasswordTypedOnAnotherSystemStillMatches() throws Exception {
+        String composed = java.text.Normalizer.normalize("m\u1eadt kh\u1ea9u 123", java.text.Normalizer.Form.NFC);
+        String decomposed = java.text.Normalizer.normalize(composed, java.text.Normalizer.Form.NFD);
+        assertNotEquals(composed, decomposed); // look identical, different characters
+
+        service().register("sam", composed.toCharArray());
+        try (Session session = service().login("sam", decomposed.toCharArray())) {
+            assertEquals("@sam", session.handle());
+        }
+    }
+
+    @Test
+    void aFailedLocalSetupLeavesNothingOnTheServer() throws Exception {
+        // the folder name is taken by a plain file, so no keystore can be created there
+        java.nio.file.Files.createDirectories(dir);
+        java.nio.file.Files.writeString(dir.resolve("blocked"), "in the way");
+
+        assertThrows(AuthException.class, () -> service().register("blocked", "password1".toCharArray()));
+        assertEquals(0, server.registrationBodies().size(), "the server must not be told about an account that has no keys");
     }
 
     @Test

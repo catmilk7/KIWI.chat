@@ -71,7 +71,7 @@
                                         <Insets left="10.0" right="10.0" />
                                     </padding>
                                     <children>
-                                        <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
+                                        <ImageView fx:id="ownAvatar" fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
                                             <image>
                                                 <Image url="@/com/vgu/client/ui/assets/default/anon_user.png" />
                                             </image>
@@ -259,7 +259,7 @@
 
                         <StackPane layoutX="15.0" layoutY="25.0" style="-fx-background-color: -color-bg-default; -fx-background-radius: 50; -fx-padding: 5;">
                             <children>
-                                <ImageView fitHeight="75.0" fitWidth="75.0" pickOnBounds="true" preserveRatio="true">
+                                <ImageView fx:id="profileAvatar" fitHeight="75.0" fitWidth="75.0" pickOnBounds="true" preserveRatio="true">
                                     <image>
                                         <Image url="@/com/vgu/client/ui/assets/default/anon_sender.png" />
                                     </image>
@@ -284,9 +284,6 @@
                             </children>
                         </VBox>
                         <Button fx:id="profileMessageBtn" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleMessageUser" style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-cursor: hand;" text="Message">
-                            <graphic>
-                                <FontIcon iconLiteral="fas-comment" style="-fx-icon-color: white;" />
-                            </graphic>
                         </Button>
                     </children>
                 </VBox>

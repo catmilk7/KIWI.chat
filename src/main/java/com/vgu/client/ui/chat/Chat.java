@@ -6,6 +6,7 @@ import com.vgu.client.ui.settings.Warning;
 import com.vgu.client.service.AuthException;
 import com.vgu.client.service.AuthService;
 import com.vgu.client.service.Session;
+import com.vgu.client.storage.AccountDao;
 import com.vgu.client.ui.SceneNavigator;
 import com.vgu.client.enums.ConversationType;
 import com.vgu.client.model.ConversationItem;
@@ -63,6 +64,8 @@ public class Chat {
     @FXML private HBox chatHeader;
     @FXML private HBox inputBar;
     @FXML private ImageView activeChatAvatar;
+    @FXML private ImageView ownAvatar;
+    @FXML private ImageView profileAvatar;
     @FXML private Button groupSettingsBtn;
     @FXML private Button leaveMenuBtn;
     @FXML private Label activeChatUser;
@@ -108,6 +111,7 @@ public class Chat {
     public void initialize() {
         hideAllFloatingMenus();
 
+        showOwnAvatar();
         if (currentUserNameLabel != null) {
             currentUserNameLabel.setText(session.handle());
         }
@@ -143,13 +147,30 @@ public class Chat {
     }
 
     /** Something changed in the background (a message arrived, was sent, the connection changed). */
+    private void showOwnAvatar() {
+        AccountDao.Avatar own = session.account().avatar();
+        if (ownAvatar != null && own != null && own.getImage() != null) {
+            Image image = new Image(new java.io.ByteArrayInputStream(own.getImage()));
+            if (!image.isError()) ownAvatar.setImage(image);
+        }
+    }
+
     private void refreshFromDatabase() {
         if (rootPane.getScene() == null) return; // this screen has already been replaced
+        showOwnAvatar();
         if (activeConversation != null) {
             session.conversations().markRead(activeConversation.id());
         }
         if (activeConversation != null && !session.conversations().exists(activeConversation.id())) {
             clearActiveConversation(); // we left it, were kicked, or it was deleted
+        }
+        if (activeConversation != null) {
+            long openId = activeConversation.id();
+            session.conversations().list("").stream().filter(item -> item.id() == openId).findFirst()
+                    .ifPresent(fresh -> { // the same conversation as it is now, e.g. after a rename
+                        activeConversation = fresh;
+                        if (activeChatUser != null) activeChatUser.setText(fresh.title());
+                    });
         }
         renderContactList(session.conversations().list(searchField != null ? searchField.getText() : ""));
         if (activeConversation != null) {
@@ -208,7 +229,7 @@ public class Chat {
         row.setStyle("-fx-cursor: hand; -fx-padding: 5; -fx-background-radius: 8; -fx-background-color: "
                 + (isSelected ? "-color-bg-subtle;" : "transparent;"));
 
-        ImageView avatar = createCircularAvatar(conv.avatarResource(), 45.0);
+        ImageView avatar = createCircularAvatar(conv.getAvatarImage(), conv.avatarResource(), 45.0);
         avatar.setSmooth(true);
 
         VBox textCol = new VBox(2.0);
@@ -270,8 +291,10 @@ public class Chat {
             groupSettingsBtn.setManaged(conv.hasSettings());
         }
         if (activeChatAvatar != null) {
+            Image picture = conv.getAvatarImage() == null ? null : new Image(new java.io.ByteArrayInputStream(conv.getAvatarImage()));
             java.io.InputStream stream = getClass().getResourceAsStream(conv.avatarResource());
-            if (stream != null) activeChatAvatar.setImage(new Image(stream));
+            if (picture != null && !picture.isError()) activeChatAvatar.setImage(picture);
+            else if (stream != null) activeChatAvatar.setImage(new Image(stream));
         }
 
         if (activeChatStatusText != null && activeChatStatus != null) {
@@ -325,7 +348,7 @@ public class Chat {
                 ? "/com/vgu/client/ui/assets/default/anon_user.png"
                 : "/com/vgu/client/ui/assets/default/anon_sender.png";
 
-        ImageView avatar = createCircularAvatar(avatarPath, 40.0);
+        ImageView avatar = createCircularAvatar(pictureOf(isMe ? session.userId() : msg.getSenderId()), avatarPath, 40.0);
         avatar.setSmooth(true);
         avatar.setCache(true);
         avatar.setCacheHint(CacheHint.QUALITY);
@@ -413,6 +436,14 @@ public class Chat {
         if (handle == null || usersProfile == null) return;
         if (profileHandle != null) profileHandle.setText(handle);
         profileUserId = userId;
+        if (profileAvatar != null) {
+            byte[] picture = pictureOf(userId == 0 ? session.userId() : userId);
+            Image image = picture == null ? null : new Image(new java.io.ByteArrayInputStream(picture));
+            java.io.InputStream fallback = getClass().getResourceAsStream(userId == 0
+                    ? "/com/vgu/client/ui/assets/default/anon_user.png" : "/com/vgu/client/ui/assets/default/anon_sender.png");
+            if (image != null && !image.isError()) profileAvatar.setImage(image);
+            else if (fallback != null) profileAvatar.setImage(new Image(fallback));
+        }
         profileUsername = handle.startsWith("@") ? handle.substring(1) : handle;
         // Nobody writes to themselves, so our own profile has no "Message" button.
         setMenuState(profileMessageBtn, userId != 0);
@@ -798,6 +829,27 @@ public class Chat {
         }
     }
 
+    /** A round avatar from the person's own picture when we have it, otherwise from the default image. */
+    private ImageView createCircularAvatar(byte[] picture, String defaultResource, double size) {
+        ImageView imageView = createCircularAvatar(defaultResource, size);
+        if (picture != null) {
+            Image image = new Image(new java.io.ByteArrayInputStream(picture));
+            if (!image.isError()) {
+                imageView.setImage(image);
+            }
+        }
+        return imageView;
+    }
+
+    /** Somebody's picture: ours from the account, anybody else's from the contacts. */
+    private byte[] pictureOf(long userId) {
+        if (userId == session.userId()) {
+            AccountDao.Avatar own = session.account().avatar();
+            return own == null ? null : own.getImage();
+        }
+        return session.contacts().avatarImage(userId);
+    }
+
     private ImageView createCircularAvatar(String resourcePath, double size) {
         ImageView imageView = new ImageView();
         imageView.setFitHeight(size);
@@ -882,7 +934,7 @@ public class Chat {
             fadeOut.setOnFinished(e -> {
                 rootPane.getChildren().remove(currentOverlay);
                 mainSplitPane.setEffect(null);
-                renderContactList(session.conversations().list(searchField != null ? searchField.getText() : ""));
+                refreshFromDatabase(); // a group may have been created, joined or renamed in that window
             });
             fadeOut.play();
         }

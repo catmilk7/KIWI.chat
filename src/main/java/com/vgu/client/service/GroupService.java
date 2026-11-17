@@ -15,11 +15,14 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Optional;
 
 /**
- * Group conversations: the server stores only an opaque {@code encryptedMeta}, so the client
- * seals the group name with a fresh AES key (kept locally as the owner's epoch sender key) and
- * the server never sees the name. Invite codes are minted and redeemed on the server.
+ * Group conversations: the server stores only an opaque {@code encryptedMeta}, so the group name is
+ * sealed with a <em>meta key</em> that every member holds (it travels in the sender key packages) and the
+ * server never sees the name. Because the server lets only the owner replace the metadata, a rename
+ * is authoritative: members just read the new sealed name the next time they refresh, even if the
+ * owner is offline by then. Invite codes are minted and redeemed on the server.
  * Blocking: call off the JavaFX thread.
  *
  * <p>Every method that changes the local conversations is {@code synchronized}. The server pushes a
@@ -54,9 +57,8 @@ public final class GroupService {
 
     /** Creates a group on the server and stores it locally with its name and key. Returns the conversation id. */
     public synchronized long createGroup(String name) throws ApiException {
-        SecretKey key = crypto.generateAesKey();
-        Sealed sealed = crypto.encrypt(key, gson.toJson(Map.of("name", name)).getBytes(StandardCharsets.UTF_8), META_AAD);
-        String encryptedMeta = sealed.ivBase64() + "." + sealed.ciphertextBase64();
+        SecretKey metaKey = crypto.generateAesKey();
+        String encryptedMeta = sealName(metaKey, name);
 
         Dto.Conversation created = api.createGroup(encryptedMeta);
 
@@ -66,8 +68,90 @@ public final class GroupService {
             contacts.ensure(memberId);
             conversations.addMember(created.getConversationId(), memberId, memberId == me ? "OWNER" : "MEMBER");
         }
-        groupKeys.save(created.getConversationId(), me, created.getEpoch(), Base64.getEncoder().encodeToString(key.getEncoded()));
+        groupKeys.saveMeta(created.getConversationId(), Base64.getEncoder().encodeToString(metaKey.getEncoded()));
+        conversations.setEncryptedMeta(created.getConversationId(), encryptedMeta);
         return created.getConversationId();
+    }
+
+    /** Longest group name the client accepts. */
+    public static final int MAX_NAME_LENGTH = 100;
+
+    /**
+     * Owner only: renames the group. The new name is sealed with the group's meta key and sent to the
+     * server, which refuses anyone but the owner; members pick it up on their next refresh.
+     */
+    public synchronized void rename(long conversationId, String newName) throws ApiException {
+        String name = newName == null ? "" : newName.trim();
+        if (name.isEmpty() || name.length() > MAX_NAME_LENGTH) {
+            throw new ApiException(400, "A group name has 1-" + MAX_NAME_LENGTH + " characters.");
+        }
+        if (!"OWNER".equals(conversations.myRole(conversationId))) {
+            throw new ApiException(403, "Only the group owner can rename the group.");
+        }
+        Optional<String> known = groupKeys.findMeta(conversationId);
+        SecretKey metaKey = known.isPresent() ? decodeKey(known.get()) : crypto.generateAesKey();
+        String encryptedMeta = sealName(metaKey, name);
+
+        api.replaceGroupMeta(conversationId, encryptedMeta);
+
+        if (known.isEmpty()) {
+            // A group made before names had a shared key: members do not have one yet. Hand ours out again.
+            groupKeys.saveMeta(conversationId, Base64.getEncoder().encodeToString(metaKey.getEncoded()));
+            groupKeys.markUndistributed(conversationId, me);
+        }
+        conversations.setEncryptedMeta(conversationId, encryptedMeta);
+        conversations.setTitle(conversationId, name);
+    }
+
+    /**
+     * A meta key arrived (in a sender key package). If it opens this group's sealed name it becomes the group's
+     * meta key and the title is updated; a key that does not open it is ignored.
+     */
+    public synchronized void acceptMetaKey(long conversationId, String keyBase64) {
+        String meta = conversations.encryptedMeta(conversationId);
+        if (meta != null && openName(decodeKey(keyBase64), meta) == null) {
+            return;
+        }
+        groupKeys.saveMeta(conversationId, keyBase64);
+        applyMeta(conversationId);
+    }
+
+    /** Sets the title from the sealed name on the server, if we hold the key that opens it. */
+    private void applyMeta(long conversationId) {
+        String meta = conversations.encryptedMeta(conversationId);
+        Optional<String> key = groupKeys.findMeta(conversationId);
+        if (meta == null || key.isEmpty()) {
+            return;
+        }
+        String name = openName(decodeKey(key.get()), meta);
+        if (name != null && !name.isBlank()) {
+            conversations.setTitle(conversationId, name);
+        }
+    }
+
+    private String sealName(SecretKey key, String name) {
+        Sealed sealed = crypto.encrypt(key, gson.toJson(Map.of("name", name)).getBytes(StandardCharsets.UTF_8), META_AAD);
+        return sealed.ivBase64() + "." + sealed.ciphertextBase64();
+    }
+
+    /** The name inside {@code encryptedMeta}, or null if the key does not open it or it is not a valid name. */
+    private String openName(SecretKey key, String encryptedMeta) {
+        try {
+            String[] parts = encryptedMeta.split("\\.", -1);
+            if (parts.length != 2) {
+                return null;
+            }
+            byte[] json = crypto.decrypt(key, new Sealed(Base64.getDecoder().decode(parts[0]),
+                    Base64.getDecoder().decode(parts[1])), META_AAD);
+            Map<?, ?> content = gson.fromJson(new String(json, StandardCharsets.UTF_8), Map.class);
+            return content == null ? null : (String) content.get("name");
+        } catch (RuntimeException e) { // wrong key, tampering, or not our format (older groups)
+            return null;
+        }
+    }
+
+    private static SecretKey decodeKey(String base64) {
+        return new javax.crypto.spec.SecretKeySpec(Base64.getDecoder().decode(base64), "AES");
     }
 
     /** Owner only. Replaces the previous active code; the raw code is only ever returned here. */
@@ -174,6 +258,10 @@ public final class GroupService {
         }
         conversations.upsert(c.getConversationId(), direct ? ConversationType.DIRECT : ConversationType.GROUP,
                 null, low, high, c.getEpoch());
+        if (!direct && c.getEncryptedMeta() != null) {
+            conversations.setEncryptedMeta(c.getConversationId(), c.getEncryptedMeta());
+            applyMeta(c.getConversationId()); // a rename shows up here
+        }
         contacts.upsert(me, myUsername, null, null);
         for (long memberId : c.getMemberIds()) {
             contacts.ensure(memberId);

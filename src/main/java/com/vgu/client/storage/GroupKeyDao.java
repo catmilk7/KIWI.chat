@@ -27,8 +27,57 @@ public final class GroupKeyDao extends BaseDao {
         }
     }
 
+    /** The group meta key (the key that seals the group name) is stored under these reserved coordinates. */
+    private static final long META_SENDER = 0;
+    private static final long META_EPOCH = -1;
+
     public GroupKeyDao(ChatDatabase db) {
         super(db);
+    }
+
+    /** Stores the key that seals this group's name, replacing any earlier one. */
+    public void saveMeta(long conversationId, String keyBase64) {
+        db.write(c -> {
+            try (PreparedStatement ps = c.prepareStatement("INSERT INTO group_sender_keys (conversation_id, sender_id, epoch, symmetric_key, distributed, created_at) "
+                    + "VALUES (?, ?, ?, ?, 1, ?) "
+                    + "ON CONFLICT(conversation_id, sender_id, epoch) DO UPDATE SET symmetric_key = excluded.symmetric_key")) {
+                ps.setLong(1, conversationId);
+                ps.setLong(2, META_SENDER);
+                ps.setLong(3, META_EPOCH);
+                ps.setString(4, keyBase64);
+                ps.setString(5, now());
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    public Optional<String> findMeta(long conversationId) {
+        return find(conversationId, META_SENDER, META_EPOCH);
+    }
+
+    /** Forgets that our keys, in every conversation, were handed out, so the next announce sends them (and what they carry) again. */
+    public void markAllUndistributed(long senderId) {
+        db.write(c -> {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE group_sender_keys SET distributed = 0 WHERE sender_id = ? AND epoch >= 0")) {
+                ps.setLong(1, senderId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    /** Forgets that our own keys in this conversation were handed out, so the next announce sends them again. */
+    public void markUndistributed(long conversationId, long senderId) {
+        db.write(c -> {
+            try (PreparedStatement ps = c.prepareStatement("UPDATE group_sender_keys SET distributed = 0 "
+                    + "WHERE conversation_id = ? AND sender_id = ? AND epoch >= 0")) {
+                ps.setLong(1, conversationId);
+                ps.setLong(2, senderId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
     }
 
     /** Stores a key unless one already exists for this (conversation, sender, epoch). */

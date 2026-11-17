@@ -234,6 +234,41 @@ public final class ConversationDao extends BaseDao {
         });
     }
 
+    /** Sets the title, replacing the current one: the group was renamed. */
+    public void setTitle(long conversationId, String title) {
+        db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE conversations SET title = ? WHERE conversation_id = ?")) {
+                ps.setString(1, title);
+                ps.setLong(2, conversationId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    /** The sealed group metadata exactly as the server last gave it, or null. */
+    public String encryptedMeta(long conversationId) {
+        return db.read(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("SELECT encrypted_meta FROM conversations WHERE conversation_id = ?")) {
+                ps.setLong(1, conversationId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getString(1) : null;
+                }
+            }
+        });
+    }
+
+    public void setEncryptedMeta(long conversationId, String encryptedMeta) {
+        db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE conversations SET encrypted_meta = ? WHERE conversation_id = ?")) {
+                ps.setString(1, encryptedMeta);
+                ps.setLong(2, conversationId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
     /** Sets the title only if we do not know one yet. */
     public void setTitleIfUnknown(long conversationId, String title) {
         db.write(c -> {
@@ -306,7 +341,7 @@ public final class ConversationDao extends BaseDao {
             try (PreparedStatement ps = c.prepareStatement("SELECT c.conversation_id, c.type, c.unread_count, c.updated_at, "
                     + "       COALESCE(c.title, '@' || peer.username, "
                     + "                CASE WHEN c.type = 'GROUP' THEN 'Group #' || c.conversation_id ELSE 'Unknown' END) AS shown_title, "
-                    + "       lm.plaintext_content, lm.sender_id, sender.username, lm.msg_type "
+                    + "       lm.plaintext_content, lm.sender_id, sender.username, lm.msg_type, peer.avatar_image "
                     + "FROM conversations c "
                     + "LEFT JOIN contacts peer "
                     + "       ON c.type = 'DIRECT' "
@@ -327,7 +362,7 @@ public final class ConversationDao extends BaseDao {
                                         MessageContent.parse(MessageType.valueOf(rs.getString(9)), rs.getString(6)),
                                         rs.getLong(7) == me, rs.getString(8));
                         items.add(ConversationItem.of(ConversationType.valueOf(rs.getString(2)), rs.getLong(1),
-                                rs.getString(5), rs.getInt(3), Instant.parse(rs.getString(4)), last));
+                                rs.getString(5), rs.getInt(3), Instant.parse(rs.getString(4)), last, rs.getBytes(10)));
                     }
                 }
                 return items;

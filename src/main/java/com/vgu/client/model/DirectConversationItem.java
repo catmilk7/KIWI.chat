@@ -21,6 +21,10 @@ public final class DirectConversationItem extends ConversationItem {
         super(id, title, unreadCount, updatedAt, last);
     }
 
+    public DirectConversationItem(long id, String title, int unreadCount, Instant updatedAt, LastMessage last, byte[] avatarImage) {
+        super(id, title, unreadCount, updatedAt, last, avatarImage);
+    }
+
     @Override
     public ConversationType type() {
         return ConversationType.DIRECT;

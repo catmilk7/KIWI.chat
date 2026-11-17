@@ -50,16 +50,46 @@ public final class MessageCrypto {
         }
     }
 
-    /** What a sender key package carries: the key, who the sender is, and (if known) the group name. */
+    /**
+     * What a sender key package carries: the key, who the sender is, and (if known) the group name and the
+     * meta key that opens the sealed name on the server, so later renames reach members by themselves.
+     */
     public static final class SenderKeyPackage {
         private final String key;
         private final String username;
         private final String groupName;
+        private final String metaKey; // null in packages from older versions
+        private final Long avatarFileId; // where the sender's avatar is on the server (null: no avatar)
+        private final String avatarKey;  // and the key that opens it
 
         public SenderKeyPackage(String key, String username, String groupName) {
+            this(key, username, groupName, null);
+        }
+
+        public SenderKeyPackage(String key, String username, String groupName, String metaKey) {
+            this(key, username, groupName, metaKey, null, null);
+        }
+
+        public SenderKeyPackage(String key, String username, String groupName, String metaKey, Long avatarFileId,
+                                String avatarKey) {
             this.key = key;
             this.username = username;
             this.groupName = groupName;
+            this.metaKey = metaKey;
+            this.avatarFileId = avatarFileId;
+            this.avatarKey = avatarKey;
+        }
+
+        public Long getAvatarFileId() {
+            return avatarFileId;
+        }
+
+        public String getAvatarKey() {
+            return avatarKey;
+        }
+
+        public String getMetaKey() {
+            return metaKey;
         }
 
         public String getKey() {
@@ -79,10 +109,26 @@ public final class MessageCrypto {
     public static final class DirectPayload {
         private final String sender;
         private final String body;
+        private final Long avatarFileId; // the sender's avatar, when they have one
+        private final String avatarKey;
 
         public DirectPayload(String sender, String body) {
+            this(sender, body, null, null);
+        }
+
+        public DirectPayload(String sender, String body, Long avatarFileId, String avatarKey) {
             this.sender = sender;
             this.body = body;
+            this.avatarFileId = avatarFileId;
+            this.avatarKey = avatarKey;
+        }
+
+        public Long getAvatarFileId() {
+            return avatarFileId;
+        }
+
+        public String getAvatarKey() {
+            return avatarKey;
         }
 
         public String getSender() {
@@ -142,11 +188,18 @@ public final class MessageCrypto {
      */
     public Envelope sealDirect(PublicKey peerEncryptionKey, MessageType type, long conversationId, long senderId,
                                String clientMsgId, String senderUsername, String plaintext) {
+        return sealDirect(peerEncryptionKey, type, conversationId, senderId, clientMsgId, senderUsername, null, plaintext);
+    }
+
+    /** As above, and the message also tells the peer where our avatar is (null for none). */
+    public Envelope sealDirect(PublicKey peerEncryptionKey, MessageType type, long conversationId, long senderId,
+                               String clientMsgId, String senderUsername, FileService.FileRef avatar, String plaintext) {
         byte[] aad = aad(type, conversationId, senderId, null, 0, clientMsgId);
         SecretKey messageKey = crypto.generateAesKey();
         byte[] forPeer = crypto.wrapKey(peerEncryptionKey, messageKey);
         byte[] forMe = crypto.wrapKey(identity.getEncryption().getPublic(), messageKey);
-        byte[] payload = gson.toJson(new DirectPayload(senderUsername, plaintext)).getBytes(StandardCharsets.UTF_8);
+        byte[] payload = gson.toJson(new DirectPayload(senderUsername, plaintext,
+                avatar == null ? null : avatar.getFileId(), avatar == null ? null : avatar.getKeyBase64())).getBytes(StandardCharsets.UTF_8);
         Sealed sealed = crypto.encrypt(messageKey, payload, aad);
         byte[] signature = signatures.sign(identity.getSigning().getPrivate(),
                 signedBytes(aad, sealed.getIv(), forPeer, forMe, sealed.getCiphertext()));

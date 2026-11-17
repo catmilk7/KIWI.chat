@@ -85,6 +85,12 @@ public final class ServerApi {
                 Dto.Conversation.class);
     }
 
+    /** Owner only: replaces the sealed group metadata (the group name). */
+    public Dto.Conversation replaceGroupMeta(long conversationId, String encryptedMeta) throws ApiException {
+        return client.json("PUT", "/api/conversations/" + conversationId + "/meta",
+                Map.of("encryptedMeta", encryptedMeta), Dto.Conversation.class);
+    }
+
     public Dto.Invite mintInvite(long conversationId, int expiresInMinutes) throws ApiException {
         return client.json("POST", "/api/conversations/" + conversationId + "/invites",
                 Map.of("expiresInMinutes", expiresInMinutes), Dto.Invite.class);

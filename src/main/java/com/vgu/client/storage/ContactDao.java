@@ -51,6 +51,100 @@ public final class ContactDao extends BaseDao {
         });
     }
 
+    /** Where a contact's avatar is on the server and the key that opens it. */
+    public static final class AvatarRef {
+        private final long userId;
+        private final long fileId;
+        private final String key;
+
+        public AvatarRef(long userId, long fileId, String key) {
+            this.userId = userId;
+            this.fileId = fileId;
+            this.key = key;
+        }
+
+        public long getUserId() {
+            return userId;
+        }
+
+        public long getFileId() {
+            return fileId;
+        }
+
+        public String getKey() {
+            return key;
+        }
+    }
+
+    /**
+     * Remembers where a contact's avatar is. A different file than before means a new avatar, so the
+     * old picture is dropped and will be downloaded again. Returns true when the reference changed.
+     */
+    public boolean saveAvatarRef(long userId, long fileId, String key) {
+        ensure(userId);
+        return db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE contacts SET avatar_file_id = ?, avatar_key = ?, avatar_image = NULL "
+                    + "WHERE user_id = ? AND (avatar_file_id IS NULL OR avatar_file_id <> ?)")) {
+                ps.setLong(1, fileId);
+                ps.setString(2, key);
+                ps.setLong(3, userId);
+                ps.setLong(4, fileId);
+                return ps.executeUpdate() > 0;
+            }
+        });
+    }
+
+    /** Stores the downloaded picture, but only if it still belongs to the avatar the contact currently has. */
+    public void saveAvatarImage(long userId, long fileId, byte[] image) {
+        db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE contacts SET avatar_image = ? WHERE user_id = ? AND avatar_file_id = ?")) {
+                ps.setBytes(1, image);
+                ps.setLong(2, userId);
+                ps.setLong(3, fileId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    /** Forgets a contact's avatar (the file is gone or unusable). */
+    public void clearAvatar(long userId) {
+        db.write(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE contacts SET avatar_file_id = NULL, avatar_key = NULL, avatar_image = NULL WHERE user_id = ?")) {
+                ps.setLong(1, userId);
+                ps.executeUpdate();
+            }
+            return null;
+        });
+    }
+
+    /** The contact's picture, or null if they have none or it has not been downloaded yet. */
+    public byte[] avatarImage(long userId) {
+        return db.read(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("SELECT avatar_image FROM contacts WHERE user_id = ?")) {
+                ps.setLong(1, userId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() ? rs.getBytes(1) : null;
+                }
+            }
+        });
+    }
+
+    /** Avatars we know the location of but have not managed to download yet. */
+    public List<AvatarRef> missingAvatars() {
+        return db.read(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("SELECT user_id, avatar_file_id, avatar_key FROM contacts "
+                    + "WHERE avatar_file_id IS NOT NULL AND avatar_key IS NOT NULL AND avatar_image IS NULL");
+                 ResultSet rs = ps.executeQuery()) {
+                List<AvatarRef> refs = new ArrayList<>();
+                while (rs.next()) {
+                    refs.add(new AvatarRef(rs.getLong(1), rs.getLong(2), rs.getString(3)));
+                }
+                return refs;
+            }
+        });
+    }
+
     public static final class Keys {
         private final String encryptionPublicKey;
         private final String identitySigningPublicKey;
@@ -73,10 +167,20 @@ public final class ContactDao extends BaseDao {
     public static final class Member {
         private final long userId;
         private final String username;
+        private final byte[] avatarImage; // null until we have their picture
 
         public Member(long userId, String username) {
+            this(userId, username, null);
+        }
+
+        public Member(long userId, String username, byte[] avatarImage) {
             this.userId = userId;
             this.username = username;
+            this.avatarImage = avatarImage;
+        }
+
+        public byte[] getAvatarImage() {
+            return avatarImage;
         }
 
         public long getUserId() {
@@ -147,7 +251,7 @@ public final class ContactDao extends BaseDao {
     /** Members of a conversation except {@code excludeUserId} (usually the account owner). */
     public List<Member> listMembers(long conversationId, long excludeUserId) {
         return db.read(c -> {
-            try (PreparedStatement ps = c.prepareStatement("SELECT ct.user_id, ct.username "
+            try (PreparedStatement ps = c.prepareStatement("SELECT ct.user_id, ct.username, ct.avatar_image "
                     + "FROM conversation_members m "
                     + "JOIN contacts ct ON ct.user_id = m.user_id "
                     + "WHERE m.conversation_id = ? AND m.user_id <> ? "
@@ -157,7 +261,7 @@ public final class ContactDao extends BaseDao {
                 List<Member> members = new ArrayList<>();
                 try (ResultSet rs = ps.executeQuery()) {
                     while (rs.next()) {
-                        members.add(new Member(rs.getLong(1), rs.getString(2)));
+                        members.add(new Member(rs.getLong(1), rs.getString(2), rs.getBytes(3)));
                     }
                 }
                 return members;

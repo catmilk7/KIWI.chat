@@ -42,6 +42,7 @@ public abstract class ConversationItem {
     private final int unreadCount;
     private final Instant updatedAt;
     private final LastMessage last;
+    private final byte[] avatarImage; // the other person's picture in a direct chat, when we have it
 
     /** An empty item: id 0, no title, nothing unread, no messages. */
     protected ConversationItem() {
@@ -54,6 +55,12 @@ public abstract class ConversationItem {
     }
 
     protected ConversationItem(long id, String title, int unreadCount, Instant updatedAt, LastMessage last) {
+        this(id, title, unreadCount, updatedAt, last, null);
+    }
+
+    protected ConversationItem(long id, String title, int unreadCount, Instant updatedAt, LastMessage last,
+                               byte[] avatarImage) {
+        this.avatarImage = avatarImage;
         this.id = id;
         this.title = title;
         this.unreadCount = unreadCount;
@@ -64,10 +71,21 @@ public abstract class ConversationItem {
     /** Creates the subclass that matches {@code type}. */
     public static ConversationItem of(ConversationType type, long id, String title, int unreadCount, Instant updatedAt,
                                       LastMessage last) {
+        return of(type, id, title, unreadCount, updatedAt, last, null);
+    }
+
+    /** Same, with the picture to show instead of the default avatar (null for none). */
+    public static ConversationItem of(ConversationType type, long id, String title, int unreadCount, Instant updatedAt,
+                                      LastMessage last, byte[] avatarImage) {
         if (type == ConversationType.DIRECT) {
-            return new DirectConversationItem(id, title, unreadCount, updatedAt, last);
+            return new DirectConversationItem(id, title, unreadCount, updatedAt, last, avatarImage);
         }
-        return new GroupConversationItem(id, title, unreadCount, updatedAt, last);
+        return new GroupConversationItem(id, title, unreadCount, updatedAt, last, avatarImage);
+    }
+
+    /** A picture to show instead of {@link #avatarResource()}, or null to use the default. */
+    public byte[] getAvatarImage() {
+        return avatarImage;
     }
 
     public long id() { return id; }

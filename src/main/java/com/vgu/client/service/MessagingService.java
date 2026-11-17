@@ -39,14 +39,15 @@ public final class MessagingService {
     private final MessageDao messages;
     private final ContactDao contacts;
     private final GroupKeyDao groupKeys;
+    private final FileService files;
     private final java.security.PrivateKey encryptionPrivateKey;
     private final long me;
     private final String myUsername;
 
     public MessagingService(ServerApi api, MessageCrypto crypto, GroupService groups, AccountDao account,
                             ConversationDao conversations, MessageDao messages, ContactDao contacts,
-                            GroupKeyDao groupKeys, java.security.PrivateKey encryptionPrivateKey, long me,
-                            String myUsername) {
+                            GroupKeyDao groupKeys, FileService files, java.security.PrivateKey encryptionPrivateKey,
+                            long me, String myUsername) {
         this.api = api;
         this.crypto = crypto;
         this.groups = groups;
@@ -55,6 +56,7 @@ public final class MessagingService {
         this.messages = messages;
         this.contacts = contacts;
         this.groupKeys = groupKeys;
+        this.files = files;
         this.encryptionPrivateKey = encryptionPrivateKey;
         this.me = me;
         this.myUsername = myUsername;
@@ -106,7 +108,7 @@ public final class MessagingService {
         long peer = peerOf(conversation);
         PublicKey peerKey = KeyCodec.decodePublic(keysOf(peer).getEncryptionPublicKey());
         Envelope envelope = crypto.sealDirect(peerKey, message.getType(), message.getConversationId(), me,
-                message.getClientMsgId(), myUsername, message.getContent());
+                message.getClientMsgId(), myUsername, myAvatar(), message.getContent());
         Dto.SendResult result = api.sendMessage(message.getConversationId(), envelope.getCiphertext(), envelope.getIv(),
                 message.getType().name(), message.getClientMsgId(), null, null);
         messages.markSent(message.getClientMsgId(), result.getMessageId(), Instant.parse(result.getCreatedAt()));
@@ -178,9 +180,23 @@ public final class MessagingService {
         PublicKey recipientKey = KeyCodec.decodePublic(keysOf(recipient).getEncryptionPublicKey());
         String clientMsgId = UUID.randomUUID().toString();
         Envelope envelope = crypto.sealPackage(recipientKey, conversationId, me, recipient, epoch, clientMsgId,
-                new SenderKeyPackage(keyBase64, myUsername, conversations.title(conversationId)));
+                new SenderKeyPackage(keyBase64, myUsername, conversations.title(conversationId),
+                        groupKeys.findMeta(conversationId).orElse(null),
+                        myAvatar() == null ? null : myAvatar().getFileId(),
+                        myAvatar() == null ? null : myAvatar().getKeyBase64()));
         api.sendMessage(conversationId, envelope.getCiphertext(), envelope.getIv(), MessageType.SENDER_KEY.name(),
                 clientMsgId, epoch, recipient);
+    }
+
+    /**
+     * Our own avatar as the others need it (where it is and its key), or null. It is only ever put inside
+     * messages and packages addressed to people we share a conversation with, so nobody learns it before
+     * we have been in contact.
+     */
+    private FileService.FileRef myAvatar() {
+        AccountDao.Avatar avatar = account.avatar();
+        return avatar == null || avatar.getFileId() == null || avatar.getKey() == null ? null
+                : new FileService.FileRef(avatar.getFileId(), avatar.getKey());
     }
 
     /** A user's public keys: from our contacts if known, otherwise fetched from the server and remembered. */
@@ -195,6 +211,45 @@ public final class MessagingService {
     }
 
     // -------------------------------------------------------------- receiving
+
+    /**
+     * A contact told us where their avatar is. Remember it, and download and decrypt it unless we already
+     * have that exact picture. A picture that cannot be fetched now is retried at the next sync; one that
+     * can never be used (missing file, not an image, too big) is forgotten.
+     */
+    private void takeAvatar(long userId, Long fileId, String key) {
+        if (fileId == null || key == null || fileId <= 0) {
+            return;
+        }
+        contacts.saveAvatarRef(userId, fileId, key);
+        if (contacts.avatarImage(userId) == null) {
+            fetchAvatar(userId, fileId, key);
+        }
+    }
+
+    private void fetchAvatar(long userId, long fileId, String key) {
+        try {
+            byte[] image = files.download(new FileService.FileRef(fileId, key));
+            if (AvatarImage.isAcceptable(image)) {
+                contacts.saveAvatarImage(userId, fileId, image);
+            } else {
+                contacts.clearAvatar(userId);
+            }
+        } catch (ApiException e) {
+            if (!e.isNetworkError()) {
+                contacts.clearAvatar(userId); // 404/403: the file is gone, nothing to retry
+            }
+        } catch (CryptoException | IllegalArgumentException e) {
+            contacts.clearAvatar(userId); // wrong key or damaged data: the same file will never open
+        }
+    }
+
+    /** Tries again for avatars whose location we know but whose picture is not here yet. */
+    private void fetchMissingAvatars() {
+        for (ContactDao.AvatarRef ref : contacts.missingAvatars()) {
+            fetchAvatar(ref.getUserId(), ref.getFileId(), ref.getKey());
+        }
+    }
 
     /**
      * Reacts to a roster change: refreshes the conversation list, then hands our sender key (with our
@@ -231,6 +286,7 @@ public final class MessagingService {
         GroupService.Refresh refresh = groups.refreshConversations(); // groups we were removed from disappear here
         boolean changed = refresh.isRemovedAny();
         announce(refresh.getConversations());
+        fetchMissingAvatars();
         while (true) {
             Dto.MessagePage page = api.sync(account.get().getSyncCursor(), SYNC_PAGE);
             for (Dto.SyncMessage message : page.getMessages()) {
@@ -285,6 +341,10 @@ public final class MessagingService {
             if (pkg.getUsername() != null && !pkg.getUsername().isBlank()) {
                 contacts.rename(m.getSenderId(), pkg.getUsername());
             }
+            takeAvatar(m.getSenderId(), pkg.getAvatarFileId(), pkg.getAvatarKey());
+            if (pkg.getMetaKey() != null) {
+                groups.acceptMetaKey(m.getConversationId(), pkg.getMetaKey()); // from now on a rename reaches us by itself
+            }
             if (pkg.getGroupName() != null && !pkg.getGroupName().isBlank()) {
                 conversations.setTitleIfUnknown(m.getConversationId(), pkg.getGroupName());
             }
@@ -301,6 +361,9 @@ public final class MessagingService {
                     new Envelope(m.getCiphertext(), m.getIv()));
             if (m.getSenderId() != me && payload.getSender() != null && !payload.getSender().isBlank()) {
                 contacts.rename(m.getSenderId(), payload.getSender()); // signed and sealed by the sender, so it can be trusted as much as the key
+            }
+            if (m.getSenderId() != me) {
+                takeAvatar(m.getSenderId(), payload.getAvatarFileId(), payload.getAvatarKey());
             }
             return payload.getBody();
         } catch (CryptoException | IllegalArgumentException e) {

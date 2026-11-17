@@ -3,6 +3,7 @@ package com.vgu.client.ui.settings;
 import com.vgu.client.service.Session;
 import com.vgu.client.storage.AccountDao;
 import com.vgu.client.network.ApiException;
+import com.vgu.client.service.AvatarImage;
 import com.vgu.client.service.FileService;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -23,7 +24,7 @@ public class Settings_user extends Handling {
     @FXML private PasswordField newPasswordField;
     @FXML private ImageView userAvatarImg;
 
-    private static final long MAX_AVATAR_BYTES = 2 * 1024 * 1024;
+    private static final long MAX_AVATAR_BYTES = 10 * 1024 * 1024; // the picture is shrunk to ~256 px before it is shared
 
     @Override
     protected void onModalInitialized() {
@@ -57,14 +58,12 @@ public class Settings_user extends Handling {
             @Override
             protected byte[] call() throws Exception {
                 if (file.length() > MAX_AVATAR_BYTES) {
-                    throw new IllegalArgumentException("Please choose an image smaller than 2 MB.");
+                    throw new IllegalArgumentException("Please choose an image smaller than 10 MB.");
                 }
-                byte[] image = Files.readAllBytes(file.toPath());
-                if (new Image(new ByteArrayInputStream(image)).isError()) {
-                    throw new IllegalArgumentException("That file is not a readable image.");
-                }
+                byte[] image = AvatarImage.shrink(Files.readAllBytes(file.toPath())); // square, ~256 px, a few KB
                 FileService.FileRef ref = session.files().upload(image);
                 session.account().saveAvatar(image, ref.getFileId(), ref.getKeyBase64());
+                session.avatarChanged(); // people we talk to get it with our next key package or message
                 return image;
             }
         };

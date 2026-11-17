@@ -212,6 +212,89 @@ class MessagingTest {
         assertEquals(1, alice.messages().pendingOutgoing().size());
     }
 
+    /** Gives the account an avatar, shares it, and waits until the new key packages are on the server. */
+    private byte[] shareAvatar(Session who, byte[] picture) throws Exception {
+        byte[] avatar = AvatarImage.shrink(picture);
+        long before = server.countMessages("SENDER_KEY");
+        FileService.FileRef ref = who.files().upload(avatar);
+        who.account().saveAvatar(avatar, ref.getFileId(), ref.getKeyBase64());
+        who.avatarChanged();
+        awaitTrue(() -> server.countMessages("SENDER_KEY") > before);
+        return avatar;
+    }
+
+    @Test
+    void aMembersAvatarReachesTheOtherMembersEncryptedAndShrunk() throws Exception {
+        byte[] sent = shareAvatar(alice, AvatarImageTest.image(1600, 900, java.awt.image.BufferedImage.TYPE_INT_RGB, "png"));
+        assertNull(bob.contacts().avatarImage(alice.userId())); // nothing yet: bobby has not synced
+
+        bob.messaging().syncAll();
+
+        assertArrayEquals(sent, bob.contacts().avatarImage(alice.userId()));
+        assertEquals(AvatarImage.SIZE, AvatarImageTest.decode(bob.contacts().avatarImage(alice.userId())).getWidth());
+        assertFalse(new String(server.storedFile(alice.account().avatar().getFileId()), java.nio.charset.StandardCharsets.ISO_8859_1)
+                .contains("JFIF")); // the server only holds ciphertext
+        assertEquals(1, bob.contacts().listMembers(group, bob.userId()).size());
+        assertNotNull(bob.contacts().listMembers(group, bob.userId()).get(0).getAvatarImage()); // the member list shows it
+    }
+
+    @Test
+    void changingTheAvatarReplacesThePictureTheOthersHave() throws Exception {
+        shareAvatar(alice, AvatarImageTest.image(400, 400, java.awt.image.BufferedImage.TYPE_INT_RGB, "png"));
+        bob.messaging().syncAll();
+        byte[] first = bob.contacts().avatarImage(alice.userId());
+        assertNotNull(first);
+
+        byte[] second = shareAvatar(alice, AvatarImageTest.image(300, 500, java.awt.image.BufferedImage.TYPE_INT_RGB, "png", java.awt.Color.BLUE));
+        bob.messaging().syncAll();
+
+        assertArrayEquals(second, bob.contacts().avatarImage(alice.userId()));
+        assertFalse(java.util.Arrays.equals(first, second));
+    }
+
+    @Test
+    void anAvatarGoesOnlyToPeopleWeShareAConversationWith() throws Exception {
+        Session stranger = account("stranger");
+        try {
+            shareAvatar(alice, AvatarImageTest.image(300, 300, java.awt.image.BufferedImage.TYPE_INT_RGB, "png"));
+            stranger.messaging().syncAll();
+
+            assertNull(stranger.contacts().avatarImage(alice.userId()));
+            assertTrue(stranger.contacts().missingAvatars().isEmpty());
+            assertNull(stranger.contacts().keys(alice.userId())); // not even a contact: anonymous until contact
+        } finally {
+            stranger.close();
+        }
+    }
+
+    @Test
+    void somethingThatIsNotAPictureIsNotKept() throws Exception {
+        long before = server.countMessages("SENDER_KEY");
+        FileService.FileRef ref = alice.files().upload("<script>not an image</script>".getBytes());
+        alice.account().saveAvatar(new byte[]{1}, ref.getFileId(), ref.getKeyBase64());
+        alice.avatarChanged();
+        awaitTrue(() -> server.countMessages("SENDER_KEY") > before);
+
+        bob.messaging().syncAll();
+
+        assertNull(bob.contacts().avatarImage(alice.userId()));
+        assertTrue(bob.contacts().missingAvatars().isEmpty()); // forgotten, not retried forever
+    }
+
+    @Test
+    void aPictureThatCannotBeFetchedYetIsRetriedAtTheNextSync() throws Exception {
+        byte[] avatar = shareAvatar(alice, AvatarImageTest.image(300, 300, java.awt.image.BufferedImage.TYPE_INT_RGB, "png"));
+        // bobby learns where the picture is, but the download fails (the file is not there yet)
+        long unknownFile = 9_999;
+        bob.contacts().saveAvatarRef(alice.userId(), unknownFile, java.util.Base64.getEncoder().encodeToString(new byte[32]));
+        assertEquals(1, bob.contacts().missingAvatars().size());
+
+        bob.messaging().syncAll(); // the real package arrives with the right location and key
+
+        assertArrayEquals(avatar, bob.contacts().avatarImage(alice.userId()));
+        assertTrue(bob.contacts().missingAvatars().isEmpty());
+    }
+
     @Test
     void aNewMemberLearnsTheGroupNameAndTheMembersWithoutAnyoneTyping() throws Exception {
         // right after joining, bobby only knows "Group #id" and "user#1"
@@ -224,6 +307,61 @@ class MessagingTest {
         assertEquals("Team", bob.conversations().list("").get(0).title());
         assertEquals(List.of("alice"), bob.contacts().listMembers(group, bob.userId()).stream().map(m -> m.getUsername()).toList());
         assertEquals(List.of("bobby"), alice.contacts().listMembers(group, alice.userId()).stream().map(m -> m.getUsername()).toList());
+    }
+
+    @Test
+    void theOwnerCanRenameTheGroupAndMembersSeeItWithoutTheOwnerOnline() throws Exception {
+        alice.messaging().refreshAndAnnounce(); // alice hands bobby her keys, among them the one that seals the name
+        bob.messaging().syncAll();
+        assertEquals("Team", bob.conversations().list("").get(0).title());
+
+        alice.groups().rename(group, "  Renamed team  ");
+
+        assertEquals("Renamed team", alice.conversations().list("").get(0).title()); // trimmed, applied locally at once
+        assertFalse(server.storedGroupMeta(group).contains("Renamed")); // the server only ever holds the sealed name
+        // bobby refreshes (a push event, a poll, or a login): no message from alice is needed any more
+        bob.groups().refreshConversations();
+        assertEquals("Renamed team", bob.conversations().list("").get(0).title());
+    }
+
+    @Test
+    void onlyTheOwnerCanRenameAndNothingChangesWhenItIsRefused() throws Exception {
+        alice.messaging().refreshAndAnnounce();
+        bob.messaging().syncAll();
+
+        ApiException refused = assertThrows(ApiException.class, () -> bob.groups().rename(group, "Hijacked"));
+        assertEquals(403, refused.status());
+        assertEquals("Team", bob.conversations().list("").get(0).title());
+
+        assertEquals(400, assertThrows(ApiException.class, () -> alice.groups().rename(group, "   ")).status());
+        assertEquals(400, assertThrows(ApiException.class,
+                () -> alice.groups().rename(group, "x".repeat(GroupService.MAX_NAME_LENGTH + 1))).status());
+        assertEquals("Team", alice.conversations().list("").get(0).title());
+    }
+
+    @Test
+    void aMemberWhoJoinsAfterARenameReadsTheCurrentName() throws Exception {
+        alice.groups().rename(group, "Brand new name");
+        Session carol = account("carol");
+        try {
+            carol.groups().join(alice.groups().mintInvite(group).getCode());
+            alice.messaging().refreshAndAnnounce(); // the newcomer is handed the meta key
+            carol.messaging().syncAll();
+
+            assertEquals("Brand new name", carol.conversations().list("").get(0).title());
+        } finally {
+            carol.close();
+        }
+    }
+
+    @Test
+    void aMetaKeyThatDoesNotOpenTheGroupsNameIsIgnored() throws Exception {
+        alice.messaging().refreshAndAnnounce();
+        bob.messaging().syncAll();
+        // a member (or the server) offers a wrong key: the real one stays and the title is untouched
+        bob.groups().acceptMetaKey(group, java.util.Base64.getEncoder().encodeToString(new byte[32]));
+        bob.groups().refreshConversations();
+        assertEquals("Team", bob.conversations().list("").get(0).title());
     }
 
     @Test

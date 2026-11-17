@@ -269,6 +269,55 @@ class ChatDatabaseTest {
     }
 
     @Test
+    void contactAvatarsAreKeptReplacedAndOnlyForTheCurrentFile() {
+        assertTrue(contacts.saveAvatarRef(BOB, 7, "a2V5"));
+        assertEquals(1, contacts.missingAvatars().size()); // known location, not downloaded
+        assertNull(contacts.avatarImage(BOB));
+
+        contacts.saveAvatarImage(BOB, 6, new byte[]{9}); // a late download of an older avatar must not win
+        assertNull(contacts.avatarImage(BOB));
+        contacts.saveAvatarImage(BOB, 7, new byte[]{1, 2, 3});
+        assertArrayEquals(new byte[]{1, 2, 3}, contacts.avatarImage(BOB));
+        assertTrue(contacts.missingAvatars().isEmpty());
+
+        assertFalse(contacts.saveAvatarRef(BOB, 7, "a2V5")); // same file again: nothing changes, picture kept
+        assertNotNull(contacts.avatarImage(BOB));
+        assertTrue(contacts.saveAvatarRef(BOB, 8, "bmV3")); // a new avatar: the old picture is dropped
+        assertNull(contacts.avatarImage(BOB));
+
+        contacts.clearAvatar(BOB);
+        assertTrue(contacts.missingAvatars().isEmpty());
+    }
+
+    @Test
+    void aDirectChatShowsThePeersPictureInTheList() {
+        contacts.saveAvatarRef(BOB, 7, "a2V5");
+        contacts.saveAvatarImage(BOB, 7, new byte[]{4, 5});
+
+        assertArrayEquals(new byte[]{4, 5}, conversations.list("").get(0).getAvatarImage());
+        conversations.upsert(12, ConversationType.GROUP, "team", null, null);
+        assertNull(conversations.list("team").get(0).getAvatarImage()); // groups use the default image
+    }
+
+    @Test
+    void anOlderDatabaseGainsTheAvatarColumns() throws Exception {
+        Path old = dir.resolve("v3.db");
+        try (ChatDatabase legacy = ChatDatabase.open(old, key)) {
+            legacy.write(c -> {
+                for (String column : new String[]{"avatar_image", "avatar_file_id", "avatar_key"}) {
+                    c.createStatement().execute("ALTER TABLE contacts DROP COLUMN " + column);
+                }
+                c.createStatement().execute("PRAGMA user_version = 3");
+                return null;
+            });
+        }
+        try (ChatDatabase upgraded = ChatDatabase.open(old, key)) {
+            new ContactDao(upgraded).upsert(5, "someone", null, null);
+            assertTrue(new ContactDao(upgraded).saveAvatarRef(5, 1, "a2V5")); // would fail without the columns
+        }
+    }
+
+    @Test
     void failedWriteRollsBackEverything() {
         assertThrows(DatabaseException.class, () -> db.write(c -> {
             try (var ps = c.prepareStatement("UPDATE account SET sync_cursor = 5")) {
