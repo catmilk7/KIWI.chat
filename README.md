@@ -31,15 +31,16 @@ On Windows use `gradlew.bat`. On Linux or macOS, if you get "permission denied",
 ```
 src/main/java/com/vgu/client/
   Main.java                    JavaFX entry point (loads fonts, theme, login screen)
-  models/
-    crypto/                    encryption, signatures, identity keys
-    storage/                   PKCS#12 keystore; SQLite local database and DAOs
-    network/                   REST client (ServerApi), realtime client, file service, DTOs
-    messaging/                 MessagingService, GroupService, MessageCrypto, message and conversation types
-  controllers/
-    auth/                      AuthService, Session, login and register screen logic
-    central/                   chat, group and user settings screens
-    utils/                     scene navigation, quote rotator
+  ui/
+    auth/                      login and register screen
+    chat/                      main chat screen
+    settings/                  user and group settings, confirm/error dialogs
+    SceneNavigator, QuoteRotator
+  service/                     AuthService, Session, MessagingService, GroupService, FileService, MessageCrypto
+  model/                       Message, MessageContent, ConversationItem and their subclasses
+  crypto/                      encryption, signatures, identity keys
+  network/                     REST client (ServerApi), realtime client, DTOs
+  storage/                     PKCS#12 keystore; SQLite local database and DAOs
   enums/                       ConversationType, MessageType, DeliveryStatus
 src/main/resources/com/vgu/client/
   db/schema.sql                local database schema
@@ -59,7 +60,7 @@ Every user has two RSA-3072 key pairs. The private halves never leave the user's
 | Signing (identity) | RSA-PSS (SHA-256, 32-byte salt) |
 | Key storage on disk | PKCS#12 file protected by the user's password |
 
-Main classes (`com.vgu.client.models`):
+Main classes (`com.vgu.client`):
 
 - `crypto.CryptoService` / `AESCryptoService`: generate keys, encrypt and decrypt, wrap and unwrap AES keys.
 - `crypto.SignatureService` / `RsaPssSignatureService`: sign and verify.
