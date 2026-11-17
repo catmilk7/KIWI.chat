@@ -283,6 +283,11 @@
                                 <Label fx:id="profileHandle" style="-fx-font-size: 20px; -fx-font-weight: bold;" text="" />
                             </children>
                         </VBox>
+                        <Button fx:id="profileMessageBtn" maxWidth="Infinity" mnemonicParsing="false" onAction="#handleMessageUser" style="-fx-background-color: -color-accent-emphasis; -fx-text-fill: white; -fx-cursor: hand;" text="Message">
+                            <graphic>
+                                <FontIcon iconLiteral="fas-comment" style="-fx-icon-color: white;" />
+                            </graphic>
+                        </Button>
                     </children>
                 </VBox>
             </children>

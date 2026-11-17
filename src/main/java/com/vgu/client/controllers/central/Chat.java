@@ -82,6 +82,9 @@ public class Chat {
 
     // Floating profile fields
     @FXML private Label profileHandle;
+    @FXML private Button profileMessageBtn;
+    private long profileUserId;
+    private String profileUsername;
 
     // Group notification
     @FXML private Button toggleBell;
@@ -326,7 +329,7 @@ public class Chat {
         avatar.setStyle("-fx-cursor: hand;");
         avatar.setOnMouseClicked(e -> {
             if (e.getButton() == MouseButton.PRIMARY) {
-                showUserProfile(senderHandle(msg, isMe), e.getSceneX(), e.getSceneY());
+                showUserProfile(senderHandle(msg, isMe), isMe ? 0 : msg.senderId(), e.getSceneX(), e.getSceneY());
                 e.consume();
             }
         });
@@ -403,9 +406,13 @@ public class Chat {
         return "@" + (msg.senderUsername() != null ? msg.senderUsername() : "user#" + msg.senderId());
     }
 
-    private void showUserProfile(String handle, double sceneX, double sceneY) {
+    private void showUserProfile(String handle, long userId, double sceneX, double sceneY) {
         if (handle == null || usersProfile == null) return;
         if (profileHandle != null) profileHandle.setText(handle);
+        profileUserId = userId;
+        profileUsername = handle.startsWith("@") ? handle.substring(1) : handle;
+        // Nobody writes to themselves, so our own profile has no "Message" button.
+        setMenuState(profileMessageBtn, userId != 0);
         showMenuAtCursor(usersProfile, sceneX, sceneY);
     }
 
@@ -656,6 +663,32 @@ public class Chat {
         };
         task.setOnFailed(e -> showErrorModal("Download failed", describe(task.getException())));
         startBackground(task, "attach-download");
+    }
+
+    /** "Message" on a user's profile: opens (or reopens) the direct chat with them and shows it. */
+    @FXML
+    private void handleMessageUser() {
+        long peer = profileUserId;
+        String username = profileUsername;
+        hideAllFloatingMenus();
+        if (peer == 0) return;
+        if (!session.online()) {
+            showErrorModal("You are offline", "Log in again once the server is reachable.");
+            return;
+        }
+        Task<Long> task = new Task<>() {
+            @Override protected Long call() throws Exception {
+                return session.messaging().startDirect(peer, username);
+            }
+        };
+        task.setOnSucceeded(e -> {
+            long id = task.getValue();
+            List<ConversationItem> all = session.conversations().list("");
+            renderContactList(all);
+            all.stream().filter(c -> c.id() == id).findFirst().ifPresent(this::selectConversation);
+        });
+        task.setOnFailed(e -> showErrorModal("Could not start the chat", describe(task.getException())));
+        startBackground(task, "start-direct");
     }
 
     private static String describe(Throwable error) {

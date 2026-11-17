@@ -77,8 +77,9 @@ public final class MessagingService {
                 throw e;
             }
             groups.store(conversation);
-            if (!"GROUP".equals(conversation.type())) {
-                throw new ApiException(400, "Direct messages are not supported yet.");
+            if ("DIRECT".equals(conversation.type())) {
+                transmitDirect(message, conversation);
+                return;
             }
             long epoch = conversation.epoch();
             SecretKey key = ensureSenderKey(conversation, epoch);
@@ -97,6 +98,45 @@ public final class MessagingService {
             messages.markFailed(message.clientMsgId());
             throw new ApiException(500, "Could not send the message: " + e.getMessage());
         }
+    }
+
+    /** A direct message: sealed for the peer (and for us), no epoch and no sender key. */
+    private void transmitDirect(Message message, Dto.Conversation conversation) throws ApiException {
+        long peer = peerOf(conversation);
+        PublicKey peerKey = KeyCodec.decodePublic(keysOf(peer).encryptionPublicKey());
+        Envelope envelope = crypto.sealDirect(peerKey, message.type(), message.conversationId(), me,
+                message.clientMsgId(), myUsername, message.content());
+        Dto.SendResult result = api.sendMessage(message.conversationId(), envelope.ciphertext(), envelope.iv(),
+                message.type().name(), message.clientMsgId(), null, null);
+        messages.markSent(message.clientMsgId(), result.messageId(), Instant.parse(result.createdAt()));
+    }
+
+    private long peerOf(Dto.Conversation conversation) throws ApiException {
+        for (long member : conversation.memberIds()) {
+            if (member != me) {
+                return member;
+            }
+        }
+        throw new ApiException(400, "This direct conversation has no other member.");
+    }
+
+    /**
+     * Opens (or reopens) the direct chat with another user and stores it locally. {@code knownUsername}
+     * is what the person is called where we met them (for example in a group); it is only a display name
+     * until their first message names them. Returns the conversation id.
+     */
+    public synchronized long startDirect(long peerId, String knownUsername) throws ApiException {
+        if (peerId == me) {
+            throw new ApiException(400, "You cannot start a chat with yourself.");
+        }
+        Dto.Conversation conversation = api.createDirect(peerId);
+        keysOf(peerId); // learn the peer's public keys now, so sending later needs no extra request
+        groups.store(conversation);
+        String name = knownUsername == null ? "" : knownUsername.startsWith("@") ? knownUsername.substring(1) : knownUsername;
+        if (!name.isBlank() && !name.startsWith("user#")) { // "user#id" is only a placeholder, not a real name
+            contacts.rename(peerId, name);
+        }
+        return conversation.conversationId();
     }
 
     /** Sends everything still waiting (SENDING or FAILED), oldest first. Stops at the first network error. */
@@ -223,6 +263,10 @@ public final class MessagingService {
             if (message.recipientId() != null && message.recipientId() == me) {
                 acceptSenderKey(message, epoch, envelope);
             }
+        } else if (conversations.isDirect(message.conversationId())) {
+            String plaintext = decryptDirect(message, type, envelope);
+            messages.saveIncoming(message.messageId(), message.clientMsgId(), message.conversationId(),
+                    message.senderId(), type, plaintext, Instant.parse(message.createdAt()));
         } else {
             String plaintext = decrypt(message, type, epoch, envelope);
             messages.saveIncoming(message.messageId(), message.clientMsgId(), message.conversationId(),
@@ -245,6 +289,22 @@ public final class MessagingService {
             }
         } catch (CryptoException | IllegalArgumentException e) {
             System.err.println("[msg] ignored an unreadable sender key from user " + m.senderId() + ": " + e.getMessage());
+        }
+    }
+
+    private String decryptDirect(Dto.SyncMessage m, MessageType type, Envelope envelope) throws ApiException {
+        try {
+            PublicKey senderSigning = KeyCodec.decodePublic(keysOf(m.senderId()).identitySigningPublicKey());
+            MessageCrypto.DirectPayload payload = crypto.openDirect(encryptionPrivateKey, senderSigning,
+                    m.senderId() == me, type, m.conversationId(), m.senderId(), m.clientMsgId(),
+                    new Envelope(m.ciphertext(), m.iv()));
+            if (m.senderId() != me && payload.sender() != null && !payload.sender().isBlank()) {
+                contacts.rename(m.senderId(), payload.sender()); // signed and sealed by the sender, so it can be trusted as much as the key
+            }
+            return payload.body();
+        } catch (CryptoException | IllegalArgumentException e) {
+            System.err.println("[msg] could not decrypt direct message " + m.messageId() + ": " + e.getMessage());
+            return UNREADABLE;
         }
     }
 

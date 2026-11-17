@@ -75,6 +75,11 @@ public final class ServerApi {
         return client.json("GET", "/api/conversations/" + conversationId, null, Dto.Conversation.class);
     }
 
+    /** Opens (or reopens) the one direct conversation with another user. */
+    public Dto.Conversation createDirect(long peerId) throws ApiException {
+        return client.json("POST", "/api/conversations/direct", Map.of("peerId", peerId), Dto.Conversation.class);
+    }
+
     public Dto.Conversation createGroup(String encryptedMeta) throws ApiException {
         return client.json("POST", "/api/conversations/group", Map.of("encryptedMeta", encryptedMeta),
                 Dto.Conversation.class);

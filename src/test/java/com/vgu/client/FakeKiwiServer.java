@@ -30,6 +30,7 @@ public final class FakeKiwiServer implements AutoCloseable {
     private final Map<String, Long> inviteCodes = new HashMap<>();
     private final Map<Long, List<Long>> groupMembers = new HashMap<>();
     private final Map<Long, Long> groupEpochs = new HashMap<>();
+    private final java.util.Set<Long> directConversations = new java.util.HashSet<>();
     private final Map<String, Long> historyFloors = new HashMap<>();
     private final Map<Long, String[]> userKeys = new HashMap<>();
     private final List<Map<String, Object>> messages = new ArrayList<>();
@@ -146,6 +147,23 @@ public final class FakeKiwiServer implements AutoCloseable {
                 groupMembers.put(id, new ArrayList<>(List.of(caller)));
                 groupEpochs.put(id, 0L);
                 ok(ex, 201, conversation(id, "GROUP", groupMembers.get(id), "OWNER", 0));
+            } else if (path.equals("/api/conversations/direct") && method.equals("POST")) {
+                long caller = callerId(auth);
+                long peer = gson.fromJson(text, JsonObject.class).get("peerId").getAsLong();
+                if (peer == caller) { fail(ex, 400, "Cannot create a direct conversation with yourself"); return; }
+                if (userKeys.get(peer) == null) { fail(ex, 404, "User not found"); return; }
+                List<Long> pair = new ArrayList<>(List.of(Math.min(caller, peer), Math.max(caller, peer)));
+                Long existing = null;
+                for (long id : directConversations) {
+                    if (groupMembers.get(id).equals(pair)) existing = id;
+                }
+                long id = existing != null ? existing : ids.getAndIncrement();
+                if (existing == null) {
+                    directConversations.add(id);
+                    groupMembers.put(id, pair);
+                    groupEpochs.put(id, 0L);
+                }
+                ok(ex, 200, conversation(id, "DIRECT", pair, "MEMBER", 0));
             } else if (path.matches("/api/conversations/\\d+/invites") && method.equals("POST")) {
                 long id = Long.parseLong(path.split("/")[3]);
                 String code = "7Q4M2X9TAB3C";
@@ -196,8 +214,9 @@ public final class FakeKiwiServer implements AutoCloseable {
                 List<Map<String, Object>> mine = new ArrayList<>();
                 for (var entry : groupMembers.entrySet()) {
                     if (entry.getValue().contains(caller)) {
-                        mine.add(conversation(entry.getKey(), "GROUP", entry.getValue(),
-                                entry.getValue().get(0) == caller ? "OWNER" : "MEMBER", groupEpochs.get(entry.getKey())));
+                        boolean direct = directConversations.contains(entry.getKey());
+                        mine.add(conversation(entry.getKey(), direct ? "DIRECT" : "GROUP", entry.getValue(),
+                                !direct && entry.getValue().get(0) == caller ? "OWNER" : "MEMBER", groupEpochs.get(entry.getKey())));
                     }
                 }
                 ok(ex, 200, mine);
@@ -207,7 +226,9 @@ public final class FakeKiwiServer implements AutoCloseable {
                 List<Long> members = groupMembers.get(id);
                 if (members == null) { fail(ex, 404, "Conversation not found"); return; }
                 if (!members.contains(caller)) { fail(ex, 403, "Not a member"); return; }
-                ok(ex, 200, conversation(id, "GROUP", members, members.get(0) == caller ? "OWNER" : "MEMBER", groupEpochs.get(id)));
+                boolean direct = directConversations.contains(id);
+                ok(ex, 200, conversation(id, direct ? "DIRECT" : "GROUP", members,
+                        !direct && members.get(0) == caller ? "OWNER" : "MEMBER", groupEpochs.get(id)));
             } else if (path.matches("/api/keys/bundle/\\d+") && method.equals("GET")) {
                 long id = Long.parseLong(path.substring(path.lastIndexOf('/') + 1));
                 String[] keys = userKeys.get(id);
@@ -221,8 +242,9 @@ public final class FakeKiwiServer implements AutoCloseable {
                 List<Long> members = groupMembers.get(conversationId);
                 if (members == null) { fail(ex, 404, "Conversation not found"); return; }
                 if (!members.contains(caller)) { fail(ex, 403, "Not a member"); return; }
+                boolean direct = directConversations.contains(conversationId);
                 long epoch = json.has("epoch") && !json.get("epoch").isJsonNull() ? json.get("epoch").getAsLong() : -1;
-                if (epoch < 0 || epoch > groupEpochs.get(conversationId)) { fail(ex, 409, "Epoch conflict"); return; }
+                if (!direct && (epoch < 0 || epoch > groupEpochs.get(conversationId))) { fail(ex, 409, "Epoch conflict"); return; }
                 String type = json.get("messageType").getAsString();
                 Long recipient = json.has("recipientId") && !json.get("recipientId").isJsonNull() ? json.get("recipientId").getAsLong() : null;
                 if (type.equals("SENDER_KEY") != (recipient != null)) { fail(ex, 400, "recipientId rules violated"); return; }
@@ -242,7 +264,7 @@ public final class FakeKiwiServer implements AutoCloseable {
                 message.put("senderId", caller);
                 message.put("type", type);
                 message.put("recipientId", recipient);
-                message.put("epoch", epoch);
+                message.put("epoch", direct ? null : epoch); // the real server ignores the epoch of direct messages
                 message.put("ciphertext", json.get("ciphertext").getAsString());
                 message.put("iv", json.get("iv").getAsString());
                 message.put("clientMsgId", clientMsgId);

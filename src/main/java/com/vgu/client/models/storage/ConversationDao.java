@@ -236,6 +236,18 @@ public final class ConversationDao extends BaseDao {
         });
     }
 
+    /** True when this is a direct (two person) conversation. */
+    public boolean isDirect(long conversationId) {
+        return db.read(c -> {
+            try (PreparedStatement ps = c.prepareStatement("SELECT type FROM conversations WHERE conversation_id = ?")) {
+                ps.setLong(1, conversationId);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next() && "DIRECT".equals(rs.getString(1));
+                }
+            }
+        });
+    }
+
     public boolean exists(long conversationId) {
         return db.read(c -> {
             try (PreparedStatement ps = c.prepareStatement("SELECT 1 FROM conversations WHERE conversation_id = ?")) {
