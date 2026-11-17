@@ -20,7 +20,7 @@
            style="-fx-background-color: rgba(15, 23, 42, 0.45);"
            stylesheets="@/com/vgu/client/ui/assets/style.css"
            xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.vgu.client.controllers.central.Settings_user">
+           fx:controller="com.vgu.client.ui.settings.Settings_user">
     <children>
         <VBox fx:id="modalCard" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="440.0" spacing="16.0"
               style="-fx-background-color: -color-bg-default; -fx-border-color: -color-border-default; -fx-border-width: 1; -fx-border-radius: 12; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.25), 20, 0, 0, 8);">
